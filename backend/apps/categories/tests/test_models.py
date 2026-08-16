@@ -10,11 +10,28 @@ from apps.categories.models import Category
 pytestmark = pytest.mark.django_db
 
 
+def empty_household(email: str):
+    """A household with no categories.
+
+    Registration seeds the default taxonomy (see test_seeding.py). These tests
+    are about tree mechanics, so they start from nothing to keep the structure
+    under test explicit.
+    """
+    created = User.objects.create_user(
+        email=email, password="corr3ct-h0rse-b4ttery"
+    ).default_household
+    Category.objects.for_household(created).delete()
+    return created
+
+
 @pytest.fixture
 def household():
-    return User.objects.create_user(
-        email="asha@example.com", password="corr3ct-h0rse-b4ttery"
-    ).default_household
+    return empty_household("asha@example.com")
+
+
+@pytest.fixture
+def other_household():
+    return empty_household("rahul@example.com")
 
 
 @pytest.fixture
@@ -67,13 +84,9 @@ class TestDepthLimit:
 
 
 class TestValidation:
-    def test_parent_must_be_in_the_same_household(self, household, food) -> None:
-        other = User.objects.create_user(
-            email="rahul@example.com", password="corr3ct-h0rse-b4ttery"
-        ).default_household
-
+    def test_parent_must_be_in_the_same_household(self, household, other_household, food) -> None:
         with pytest.raises(ValidationError, match="different household"):
-            Category.objects.create(household=other, name="Eating Out", parent=food)
+            Category.objects.create(household=other_household, name="Eating Out", parent=food)
 
     def test_category_cannot_be_its_own_parent(self, food) -> None:
         food.parent = food
@@ -99,21 +112,17 @@ class TestValidation:
 
         assert Category.objects.filter(name="Other").count() == 2
 
-    def test_two_households_can_use_the_same_category_name(self, household, food) -> None:
-        other = User.objects.create_user(
-            email="rahul@example.com", password="corr3ct-h0rse-b4ttery"
-        ).default_household
-        Category.objects.create(household=other, name="Food & Dining")
+    def test_two_households_can_use_the_same_category_name(
+        self, household, other_household, food
+    ) -> None:
+        Category.objects.create(household=other_household, name="Food & Dining")
 
         assert Category.objects.filter(name="Food & Dining").count() == 2
 
 
 class TestHouseholdIsolation:
-    def test_scoping_excludes_other_households(self, household, food) -> None:
-        rahul = User.objects.create_user(
-            email="rahul@example.com", password="corr3ct-h0rse-b4ttery"
-        )
-        Category.objects.create(household=rahul.default_household, name="Transport")
+    def test_scoping_excludes_other_households(self, household, other_household, food) -> None:
+        Category.objects.create(household=other_household, name="Transport")
 
         visible = Category.objects.for_household(household)
         assert list(visible) == [food]
