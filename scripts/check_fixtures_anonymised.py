@@ -8,6 +8,11 @@ cannot read an encrypted PDF.
 
 The actual safeguard is the contributor following docs/anonymising-statements.md.
 
+False positives are expected: a 12-digit UPI reference is indistinguishable
+from an Aadhaar number by shape alone. Rather than weakening the patterns,
+record the exception in a `.pii-allowlist` file beside the fixture, with a
+reason. That keeps the check strict and the decision reviewable.
+
 Usage:
     python scripts/check_fixtures_anonymised.py [path ...]
 
@@ -19,6 +24,7 @@ from __future__ import annotations
 import re
 import sys
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -30,14 +36,18 @@ DEFAULT_SEARCH_PATHS = [
 # Directories whose contents are treated as fixtures.
 FIXTURE_DIR_NAMES = {"fixtures", "expected"}
 
-# Values a properly anonymised fixture is expected to contain. Matches that are
-# themselves placeholders are not findings.
+ALLOWLIST_FILENAME = ".pii-allowlist"
+
+# The placeholder values docs/anonymising-statements.md tells contributors to
+# use. Flagging these would train people to ignore the check.
 ALLOWED_PLACEHOLDERS = {
     "test@example.com",
     "user@example.com",
     "noreply@example.com",
-    "ABCDE1234F",  # canonical dummy PAN used in the anonymisation guide
-    "XXXXXXXXXXXX",
+    "ABCDE1234F",  # canonical dummy PAN
+    "BANK0000000",  # canonical dummy IFSC
+    "9000000000",  # canonical dummy mobile
+    "TEST USER",
 }
 
 
@@ -57,7 +67,9 @@ PATTERNS: list[Pattern] = [
     Pattern(
         "Aadhaar-shaped number",
         re.compile(r"\b[2-9][0-9]{3}[ -]?[0-9]{4}[ -]?[0-9]{4}\b"),
-        "Aadhaar numbers must never appear in the repository, masked or not.",
+        "Aadhaar numbers must never appear in the repository, masked or not. "
+        "If this is a transaction reference rather than an Aadhaar number, add "
+        f"it to a {ALLOWLIST_FILENAME} file beside the fixture.",
     ),
     Pattern(
         "Email address",
@@ -67,19 +79,55 @@ PATTERNS: list[Pattern] = [
     Pattern(
         "Indian mobile number",
         re.compile(r"(?<![\d.])(?:\+?91[ -]?)?[6-9][0-9]{9}(?![\d.])"),
-        "Replace with 9000000000.",
+        "Replace with the dummy number 9000000000.",
     ),
     Pattern(
-        "Unmasked account number",
+        "Long unmasked digit run",
         re.compile(r"\b(?<![X*])\d{11,18}\b"),
-        "Mask all but the last four digits, e.g. XXXXXXXX1234.",
+        "If this is an account or card number, mask all but the last four "
+        "digits (XXXXXXXX1234). If it is a transaction reference, add it to a "
+        f"{ALLOWLIST_FILENAME} file beside the fixture.",
     ),
     Pattern(
         "IFSC code",
         re.compile(r"\b[A-Z]{4}0[A-Z0-9]{6}\b"),
-        "Replace with a dummy such as BANK0000000.",
+        "Replace with the dummy IFSC BANK0000000.",
     ),
 ]
+
+
+def is_placeholder(value: str) -> bool:
+    """True for values that are obviously synthetic.
+
+    Covers the documented placeholders plus any run of a single repeated digit
+    (000000000000, 111111111111), which no real account number looks like.
+    """
+    if value in ALLOWED_PLACEHOLDERS:
+        return True
+    digits = value.replace(" ", "").replace("-", "")
+    return digits.isdigit() and len(set(digits)) == 1
+
+
+@lru_cache(maxsize=None)
+def allowlist_for(directory: Path) -> frozenset[str]:
+    """Allowed values from `.pii-allowlist` files in this directory and above.
+
+    Walks up to the repository root so a bank can allow a value for all of its
+    fixtures, or the project can allow one globally.
+    """
+    allowed: set[str] = set()
+    current = directory
+    while True:
+        candidate = current / ALLOWLIST_FILENAME
+        if candidate.is_file():
+            for line in candidate.read_text().splitlines():
+                entry = line.split("#", 1)[0].strip()
+                if entry:
+                    allowed.add(entry)
+        if current == REPO_ROOT or current.parent == current:
+            break
+        current = current.parent
+    return frozenset(allowed)
 
 
 def iter_fixture_files(search_paths: list[Path]) -> list[Path]:
@@ -88,9 +136,9 @@ def iter_fixture_files(search_paths: list[Path]) -> list[Path]:
         if not base.exists():
             continue
         for path in base.rglob("*"):
-            if not path.is_file():
+            if not path.is_file() or path.name == ALLOWLIST_FILENAME:
                 continue
-            if FIXTURE_DIR_NAMES.intersection(part for part in path.parts):
+            if FIXTURE_DIR_NAMES.intersection(path.parts):
                 files.append(path)
     return sorted(files)
 
@@ -109,11 +157,13 @@ def read_text(path: Path) -> str:
 
 def scan(path: Path) -> list[tuple[Pattern, str]]:
     text = read_text(path)
+    allowed = allowlist_for(path.parent)
     findings: list[tuple[Pattern, str]] = []
+
     for pattern in PATTERNS:
         for match in pattern.regex.finditer(text):
             value = match.group(0)
-            if value in ALLOWED_PLACEHOLDERS:
+            if value in allowed or is_placeholder(value):
                 continue
             findings.append((pattern, value))
     return findings

@@ -6,9 +6,10 @@ categories that nest three levels deep.
 
 Built for Indian statement formats — the ones generic finance apps don't read.
 
-> **Status: early development.** The foundation and contributor tooling are in
-> place; statement parsing and budgeting are being built. Star the repo to
-> follow along, or [add support for your bank](docs/adding-a-bank-parser.md).
+> **Status: early development.** Statement parsing works and two banks are
+> supported; categorisation and budgeting are next. Star the repo to follow
+> along, or [add support for your bank](docs/adding-a-bank-parser.md) — it's
+> three files and no changes to shared code.
 
 ---
 
@@ -69,7 +70,8 @@ Full guide: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 | Bank | Savings/current | Credit card | Formats |
 | --- | --- | --- | --- |
-| _None yet — parser system lands in the next phase_ | | | |
+| HDFC Bank | ✅ | — | `xls` (delimited export), `csv`, `txt` |
+| ICICI Bank | — | ✅ | `pdf` (incl. password-protected) |
 
 Adding yours is the most useful contribution you can make, and the codebase is
 arranged specifically to make it cheap. Start with

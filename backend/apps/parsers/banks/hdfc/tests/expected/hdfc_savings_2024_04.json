@@ -1,0 +1,94 @@
+{
+  "bank_slug": "hdfc",
+  "statement_kind": "bank",
+  "source_hint": "XXXXXXXX1234",
+  "period_start": "2024-04-01",
+  "period_end": "2024-04-28",
+  "opening_balance": "7450.75",
+  "closing_balance": "90088.25",
+  "transaction_count": 10,
+  "total_debits": "-44224.50",
+  "total_credits": "126862.00",
+  "transactions": [
+    {
+      "txn_date": "2024-04-01",
+      "value_date": "2024-04-01",
+      "description": "SALARY CREDIT TESTCORP PVT LTD",
+      "amount": "125000.00",
+      "balance": "132450.75",
+      "reference": "NEFT000111"
+    },
+    {
+      "txn_date": "2024-04-03",
+      "value_date": "2024-04-03",
+      "description": "UPI-SWIGGY-SWIGGY@EXAMPLEBANK-PAYMENT",
+      "amount": "-450.00",
+      "balance": "132000.75",
+      "reference": "409412345678"
+    },
+    {
+      "txn_date": "2024-04-05",
+      "value_date": "2024-04-05",
+      "description": "ACH D- HDFC LIFE INSURANCE",
+      "amount": "-3250.00",
+      "balance": "128750.75",
+      "reference": "ACH0009876"
+    },
+    {
+      "txn_date": "2024-04-07",
+      "value_date": "2024-04-07",
+      "description": "UPI-BIGBASKET-BB@EXAMPLEBANK-GROCERY",
+      "amount": "-2180.50",
+      "balance": "126570.25",
+      "reference": "409498765432"
+    },
+    {
+      "txn_date": "2024-04-12",
+      "value_date": "2024-04-12",
+      "description": "NEFT DR-BANK0000000-RAHUL K-RENT APRIL",
+      "amount": "-28000.00",
+      "balance": "98570.25",
+      "reference": "NEFT000222"
+    },
+    {
+      "txn_date": "2024-04-15",
+      "value_date": "2024-04-15",
+      "description": "POS 000000000000 IRCTC ONLINE",
+      "amount": "-1845.00",
+      "balance": "96725.25",
+      "reference": "POS0001234"
+    },
+    {
+      "txn_date": "2024-04-18",
+      "value_date": "2024-04-18",
+      "description": "UPI-AMAZON PAY INDIA-AMZN@EXAMPLEBANK",
+      "amount": "-3499.00",
+      "balance": "93226.25",
+      "reference": "409411223344"
+    },
+    {
+      "txn_date": "2024-04-22",
+      "value_date": "2024-04-22",
+      "description": "INT.CR-SAVINGS INTEREST",
+      "amount": "612.00",
+      "balance": "93838.25",
+      "reference": "INT0000001"
+    },
+    {
+      "txn_date": "2024-04-25",
+      "value_date": "2024-04-25",
+      "description": "ATW-XXXXXXXX1234-TEST BRANCH ATM",
+      "amount": "-5000.00",
+      "balance": "88838.25",
+      "reference": "ATM0005678"
+    },
+    {
+      "txn_date": "2024-04-28",
+      "value_date": "2024-04-28",
+      "description": "UPI-ASHA S-ASHA@EXAMPLEBANK-SPLIT DINNER",
+      "amount": "1250.00",
+      "balance": "90088.25",
+      "reference": "409455667788"
+    }
+  ]
+}

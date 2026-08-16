@@ -1,6 +1,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help setup dev dev-backend dev-frontend migrate migrations superuser \
         test test-backend test-frontend lint format check build clean \
+        regenerate-goldens check-fixtures \
         docker-up docker-down
 
 BACKEND := cd backend && poetry run
@@ -48,6 +49,13 @@ superuser: ## Create an admin user
 	$(BACKEND) python manage.py createsuperuser
 
 # --- Quality ----------------------------------------------------------------
+
+regenerate-goldens: ## Rebuild parser golden files (BANK=hdfc to narrow) — read the diff!
+	$(BACKEND) python manage.py regenerate_goldens \
+		--settings=config.settings.test $(if $(BANK),--bank $(BANK),)
+
+check-fixtures: ## Scan parser fixtures for personal data
+	python3 scripts/check_fixtures_anonymised.py
 
 test: test-backend test-frontend ## Run all tests
 

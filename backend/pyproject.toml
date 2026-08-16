@@ -12,6 +12,11 @@ dependencies = [
     "psycopg[binary] (>=3.2,<4.0)",
     "gunicorn (>=23.0,<24.0)",
     "whitenoise (>=6.7,<7.0)",
+    # Statement parsing. pdfplumber handles both text extraction and the
+    # encrypted PDFs most Indian card issuers email out.
+    "pdfplumber (>=0.11,<1.0)",
+    "openpyxl (>=3.1,<4.0)",
+    "xlrd (>=2.0,<3.0)",
 ]
 
 [tool.poetry]
@@ -25,6 +30,9 @@ ruff = "^0.8"
 mypy = "^1.13"
 django-stubs = { extras = ["compatible-mypy"], version = "^5.1" }
 djangorestframework-stubs = "^3.15"
+# Used only to generate synthetic PDF fixtures — see the generator scripts under
+# apps/parsers/banks/*/tests/. Not needed at runtime.
+reportlab = "^4.2"
 
 [build-system]
 requires = ["poetry-core>=2.0"]

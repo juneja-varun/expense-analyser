@@ -1,0 +1,94 @@
+{
+  "bank_slug": "icici",
+  "statement_kind": "credit_card",
+  "source_hint": "XXXXXXXXXXXX4321",
+  "period_start": "2024-03-05",
+  "period_end": "2024-04-04",
+  "opening_balance": null,
+  "closing_balance": "-18450.75",
+  "transaction_count": 10,
+  "total_debits": "-15749.75",
+  "total_credits": "13299.00",
+  "transactions": [
+    {
+      "txn_date": "2024-03-06",
+      "value_date": null,
+      "description": "SWIGGY BANGALORE IN",
+      "amount": "-675.50",
+      "balance": null,
+      "reference": null
+    },
+    {
+      "txn_date": "2024-03-08",
+      "value_date": null,
+      "description": "AMAZON PAY INDIA PVT MUMBAI IN",
+      "amount": "-2499.00",
+      "balance": null,
+      "reference": null
+    },
+    {
+      "txn_date": "2024-03-11",
+      "value_date": null,
+      "description": "IRCTC RAIL CONNECT NEW DELHI IN",
+      "amount": "-1845.00",
+      "balance": null,
+      "reference": null
+    },
+    {
+      "txn_date": "2024-03-14",
+      "value_date": null,
+      "description": "BIGBASKET BANGALORE IN",
+      "amount": "-3210.75",
+      "balance": null,
+      "reference": null
+    },
+    {
+      "txn_date": "2024-03-16",
+      "value_date": null,
+      "description": "REFUND AMAZON PAY INDIA PVT",
+      "amount": "1299.00",
+      "balance": null,
+      "reference": null
+    },
+    {
+      "txn_date": "2024-03-19",
+      "value_date": null,
+      "description": "INDIAN OIL CORP TEST CITY IN",
+      "amount": "-2000.00",
+      "balance": null,
+      "reference": null
+    },
+    {
+      "txn_date": "2024-03-22",
+      "value_date": null,
+      "description": "PAYMENT RECEIVED - THANK YOU",
+      "amount": "12000.00",
+      "balance": null,
+      "reference": null
+    },
+    {
+      "txn_date": "2024-03-25",
+      "value_date": null,
+      "description": "NETFLIX COM MUMBAI IN",
+      "amount": "-649.00",
+      "balance": null,
+      "reference": null
+    },
+    {
+      "txn_date": "2024-03-28",
+      "value_date": null,
+      "description": "TEST CITY METRO RAIL IN",
+      "amount": "-300.00",
+      "balance": null,
+      "reference": null
+    },
+    {
+      "txn_date": "2024-04-01",
+      "value_date": null,
+      "description": "MYNTRA DESIGNS BANGALORE IN",
+      "amount": "-4570.50",
+      "balance": null,
+      "reference": null
+    }
+  ]
+}

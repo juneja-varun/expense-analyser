@@ -1,0 +1,8 @@
+# Project-wide exceptions for the fixture privacy scanner.
+# Applies to every bank. Keep this list short — bank-specific exceptions belong
+# in a .pii-allowlist beside that bank's fixtures.
+
+# reportlab's fixed "invariant" timestamp (PDF metadata D:20000101000000).
+# Generated PDF fixtures set this deliberately so they are byte-reproducible;
+# see any bank's tests/make_fixture.py.
+20000101000000
