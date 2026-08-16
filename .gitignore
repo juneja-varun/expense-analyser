@@ -29,8 +29,13 @@ npm-debug.log*
 # Never commit real statements. Test fixtures live under
 # apps/parsers/banks/<bank>/tests/fixtures/ and must be anonymised first —
 # see docs/anonymising-statements.md.
-files/
-statements/
+#
+# Anchored with a leading slash so these match only scratch directories at the
+# repository root. Unanchored, `statements/` also matched the application
+# package backend/apps/statements/ and silently excluded it from commits.
+/files/
+/statements/
+/backend/media/
 *.local.pdf
 *.local.csv
 *.local.xls*

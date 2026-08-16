@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help setup dev dev-backend dev-frontend migrate migrations superuser \
         test test-backend test-frontend lint format check build clean \
-        regenerate-goldens check-fixtures \
+        regenerate-goldens check-fixtures migrations-check \
         docker-up docker-down
 
 BACKEND := cd backend && poetry run
@@ -62,6 +62,10 @@ test: test-backend test-frontend ## Run all tests
 test-backend: ## Run the Python test suite
 	$(BACKEND) pytest
 
+migrations-check: ## Fail if a model change has no migration
+	$(BACKEND) python manage.py makemigrations --check --dry-run \
+		--settings=config.settings.test
+
 test-frontend: ## Typecheck the frontend
 	$(FRONTEND) npx tsc --noEmit
 
@@ -74,7 +78,7 @@ format: ## Auto-format the code
 	$(BACKEND) ruff format .
 	$(BACKEND) ruff check . --fix
 
-check: lint test ## What CI runs — do this before opening a PR
+check: lint migrations-check test ## What CI runs — do this before opening a PR
 
 build: ## Build the production frontend bundle
 	$(FRONTEND) npm run build
