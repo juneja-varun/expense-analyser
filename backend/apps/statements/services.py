@@ -10,6 +10,7 @@ from django.db import transaction as db_transaction
 
 from apps.parsers.base import ParsedFile, ParsedStatement, ParseError
 from apps.parsers.registry import parse_statement
+from apps.rules.engine import categorise_transactions
 from apps.sources.services import resolve_source
 from apps.statements.models import Statement
 from apps.transactions.models import Transaction, compute_dedupe_hash
@@ -108,7 +109,12 @@ def _persist(statement: Statement, parsed: ParsedStatement) -> ImportResult:
     )
 
     to_create = [t for h, t in incoming.items() if h not in already_present]
-    Transaction.objects.bulk_create(to_create)
+    created = Transaction.objects.bulk_create(to_create)
+
+    # Categorise inside the same transaction as the import, so a statement is
+    # never briefly visible as a wall of uncategorised rows.
+    if created:
+        categorise_transactions(household, created)
 
     duplicates = len(incoming) - len(to_create)
 
