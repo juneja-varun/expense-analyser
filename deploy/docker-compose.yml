@@ -1,0 +1,60 @@
+# Self-hosted deployment. Developers do not need this — see CONTRIBUTING.md for
+# the native workflow.
+#
+#   cp .env.example .env      # then set DJANGO_SECRET_KEY
+#   docker compose -f deploy/docker-compose.yml up
+#
+# The app is then on http://localhost:8000 — API and SPA on the same origin.
+#
+# Values come from the repo-root .env via `env_file`. Anything set under
+# `environment:` overrides that file, which is how the container-specific
+# values (settings module, database host) win over a developer's local ones.
+
+name: expense-analyser
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-expense}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-expense}
+      POSTGRES_DB: ${POSTGRES_DB:-expense_analyser}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-expense}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ../.env
+    environment:
+      # These must not be inherited from a developer's local .env.
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DJANGO_DEBUG: "False"
+      DATABASE_URL: postgres://${POSTGRES_USER:-expense}:${POSTGRES_PASSWORD:-expense}@db:5432/${POSTGRES_DB:-expense_analyser}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:8000}
+      # Off by default: with no TLS in front, secure cookies would make login
+      # impossible over plain http://localhost. Turn both on once a reverse
+      # proxy with a certificate sits in front of this.
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-False}
+      DJANGO_SECURE_COOKIES: ${DJANGO_SECURE_COOKIES:-False}
+    volumes:
+      - media_data:/app/media
+    ports:
+      - "${APP_PORT:-8000}:8000"
+
+volumes:
+  postgres_data:
+  media_data:

@@ -1,0 +1,91 @@
+name: Bank support request
+description: Ask for support for a bank or credit card we can't parse yet
+title: "[Bank] "
+labels: ["bank-support", "help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping widen coverage.
+
+        **Do not attach a real statement.** It contains your name, account
+        number and full spending history, and anything attached here is public
+        and permanent. If you can share a sample, anonymise it first using
+        [docs/anonymising-statements.md](../../blob/main/docs/anonymising-statements.md).
+
+        Fancy writing the parser yourself? It's three files and no changes to
+        shared code — see
+        [docs/adding-a-bank-parser.md](../../blob/main/docs/adding-a-bank-parser.md).
+
+  - type: input
+    id: bank
+    attributes:
+      label: Bank or card issuer
+      placeholder: e.g. HDFC Bank, ICICI, SBI Card, Axis
+    validations:
+      required: true
+
+  - type: dropdown
+    id: statement-kind
+    attributes:
+      label: Statement type
+      options:
+        - Savings / current account
+        - Credit card
+        - Both
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: formats
+    attributes:
+      label: Formats you can download
+      options:
+        - label: PDF
+        - label: XLS / XLSX
+        - label: CSV
+        - label: Only viewable in net banking (no download)
+
+  - type: dropdown
+    id: password
+    attributes:
+      label: Is the file password-protected?
+      options:
+        - "No"
+        - "Yes — date of birth"
+        - "Yes — a mix of name and DOB / card digits"
+        - "Yes — something else"
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: layout
+    attributes:
+      label: What does the layout look like?
+      description: >
+        Describe the columns in order and how many junk rows precede the table.
+        Retyping two or three invented rows in the real column order is genuinely
+        useful — just don't copy real transactions.
+      placeholder: |
+        ~20 header lines, then a tab-separated table:
+        Date | Narration | Ref No | Withdrawal | Deposit | Closing Balance
+        Dates look like 03 Apr 2024. Amounts use commas: 1,20,450.00
+    validations:
+      required: true
+
+  - type: textarea
+    id: sample
+    attributes:
+      label: Anonymised sample (optional)
+      description: >
+        Only if it has been through the anonymisation guide. When in doubt,
+        leave this blank and describe the layout above instead.
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have not attached a statement containing real personal data.
+          required: true

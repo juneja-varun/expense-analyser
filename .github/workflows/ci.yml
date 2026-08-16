@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.13"
+  NODE_VERSION: "20"
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: expense_analyser_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/expense_analyser_test
+      DJANGO_SETTINGS_MODULE: config.settings.test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Install dependencies
+        working-directory: backend
+        run: poetry install --no-interaction
+
+      - name: Lint
+        working-directory: backend
+        run: |
+          poetry run ruff check .
+          poetry run ruff format --check .
+
+      - name: Check for missing migrations
+        working-directory: backend
+        run: poetry run python manage.py makemigrations --check --dry-run
+
+      - name: Test
+        working-directory: backend
+        run: poetry run pytest --cov=apps --cov-report=term-missing
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  fixture-privacy:
+    name: Fixture privacy scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # A backstop, not a guarantee. Contributors are expected to anonymise
+      # fixtures per docs/anonymising-statements.md; this catches the obvious
+      # misses before they become permanent git history.
+      - name: Scan test fixtures for personal data
+        run: python scripts/check_fixtures_anonymised.py
+
+  deploy-stack:
+    name: Self-hosted stack
+    runs-on: ubuntu-latest
+    # Contributors never touch Docker, but self-hosters depend on this working,
+    # so it is verified on every change rather than at release time.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start the stack
+        run: |
+          cp .env.example .env
+          sed -i 's/^DJANGO_SECRET_KEY=.*/DJANGO_SECRET_KEY=ci-smoke-test-key/' .env
+          docker compose -f deploy/docker-compose.yml up --build --detach --wait
+
+      - name: Smoke-test the health endpoint
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/api/health/ | tee /dev/stderr | grep -q '"status":"ok"'; then
+              echo "Stack is healthy"; exit 0
+            fi
+            sleep 2
+          done
+          echo "Stack did not become healthy"; exit 1
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose -f deploy/docker-compose.yml logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f deploy/docker-compose.yml down --volumes

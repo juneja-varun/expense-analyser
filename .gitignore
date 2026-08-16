@@ -1,5 +1,41 @@
+# --- Secrets and local config ---
+.env
+.env.local
+*.pem
+
+# --- Python ---
+__pycache__/
+*.py[cod]
 venv/
-.idea/
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Django ---
+backend/staticfiles/
+backend/media/
+*.sqlite3
+
+# --- Node ---
+node_modules/
+frontend/dist/
+npm-debug.log*
+
+# --- Statements and financial data ---
+# Never commit real statements. Test fixtures live under
+# apps/parsers/banks/<bank>/tests/fixtures/ and must be anonymised first —
+# see docs/anonymising-statements.md.
 files/
+statements/
+*.local.pdf
+*.local.csv
+*.local.xls*
+
+# --- Editors and OS ---
+.idea/
+.vscode/
 .DS_Store
-__pycache__
