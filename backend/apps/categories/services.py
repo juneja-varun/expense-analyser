@@ -23,56 +23,97 @@ def seed_default_categories(household: Household) -> int:
     to re-run after adding categories to the taxonomy in a later release
     without disturbing what the user has renamed or added.
 
+    Inserts one level at a time with `bulk_create` — the tree is around fifty
+    rows, and creating them individually made registration a fifty-query
+    operation. `bulk_create` bypasses `save()`, so `depth` and `root` are set
+    explicitly here; the tests in test_seeding.py check they still come out
+    right.
+
     Returns the number of categories created.
     """
-    created = 0
+    existing_roots = set(
+        Category.objects.for_household(household)
+        .filter(parent__isnull=True)
+        .values_list("name", flat=True)
+    )
+
+    roots: list[Category] = []
+    # Children are held with a reference to their parent's *spec* until the
+    # parents have primary keys.
+    pending_children: list[tuple[str, list[str], str, bool, int, Category]] = []
     sort_order = 0
 
     for group, is_income in ((DEFAULT_TAXONOMY, False), (INCOME_TAXONOMY, True)):
         for name, colour, children in group:
             sort_order += 1
+            if name in existing_roots:
+                # The user already has this branch; leave their edits alone.
+                continue
 
-            root, was_created = Category.objects.get_or_create(
+            root = Category(
                 household=household,
                 name=name,
                 parent=None,
-                defaults={
-                    "colour": colour,
-                    "is_income": is_income,
-                    "is_system": True,
-                    "sort_order": sort_order,
-                },
+                depth=0,
+                root=None,
+                colour=colour,
+                is_income=is_income,
+                is_system=True,
+                sort_order=sort_order,
             )
-            if not was_created:
-                # The user already has this branch; leave their edits alone.
-                continue
-            created += 1
-
+            roots.append(root)
             for child_order, (child_name, grandchildren) in enumerate(children, start=1):
-                child = Category.objects.create(
-                    household=household,
-                    name=child_name,
-                    parent=root,
-                    colour=colour,
-                    is_income=is_income,
-                    is_system=True,
-                    sort_order=child_order,
+                pending_children.append(
+                    (child_name, grandchildren, colour, is_income, child_order, root)
                 )
-                created += 1
 
-                for grandchild_order, grandchild_name in enumerate(grandchildren, start=1):
-                    Category.objects.create(
-                        household=household,
-                        name=grandchild_name,
-                        parent=child,
-                        colour=colour,
-                        is_income=is_income,
-                        is_system=True,
-                        sort_order=grandchild_order,
-                    )
-                    created += 1
+    if not roots:
+        return 0
 
-    return created
+    Category.objects.bulk_create(roots)
+
+    children: list[Category] = []
+    pending_grandchildren: list[tuple[str, str, bool, int, Category]] = []
+
+    for name, grandchildren, colour, is_income, order, root in pending_children:
+        child = Category(
+            household=household,
+            name=name,
+            parent=root,
+            depth=1,
+            root=root,
+            colour=colour,
+            is_income=is_income,
+            is_system=True,
+            sort_order=order,
+        )
+        children.append(child)
+        for grandchild_order, grandchild_name in enumerate(grandchildren, start=1):
+            pending_grandchildren.append(
+                (grandchild_name, colour, is_income, grandchild_order, child)
+            )
+
+    Category.objects.bulk_create(children)
+
+    grandchildren_rows = [
+        Category(
+            household=household,
+            name=name,
+            parent=parent,
+            depth=2,
+            # The denormalisation that makes roll-ups a single join: a
+            # third-level category points at the *top* level, not its parent.
+            root=parent.root,
+            colour=colour,
+            is_income=is_income,
+            is_system=True,
+            sort_order=order,
+        )
+        for name, colour, is_income, order, parent in pending_grandchildren
+    ]
+    Category.objects.bulk_create(grandchildren_rows)
+
+    return len(roots) + len(children) + len(grandchildren_rows)
 
 
 def get_uncategorised(household: Household) -> Category:

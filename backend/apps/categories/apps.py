@@ -5,7 +5,6 @@ class CategoriesConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "apps.categories"
 
-    def ready(self) -> None:
-        # Imported for its side effect: registers the household post_save
-        # receiver that seeds the default category tree.
-        from apps.categories import signals  # noqa: F401
+    # Seeding a new household is handled by apps.rules.signals, which can see
+    # both categories and rules and so can guarantee the tree exists before
+    # rules try to resolve it by path.

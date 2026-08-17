@@ -61,6 +61,41 @@ password handling, Indian date formats, lakh-style number grouping, `Dr`/`Cr`
 suffixes) already live in `backend/apps/parsers/utils/`. If you find yourself
 writing something that another bank would also need, put it there instead.
 
+## Adding a merchant pattern
+
+The quickest useful contribution, and it needs no Python. Bundled patterns live
+in `backend/apps/rules/builtin_patterns.yaml` and categorise transactions for
+everyone on their first upload:
+
+```yaml
+  - { pattern: SWIGGY, category: "Food & Dining > Eating Out > Food Delivery" }
+```
+
+`category` is a path in the default taxonomy (`apps/categories/taxonomy.py`).
+Open your own statement, find a merchant nothing recognised, add a line.
+
+**One trap worth knowing.** A `contains` pattern matches inside longer words,
+and it fails silently — the transaction is simply filed wrong:
+
+| Pattern | Also matches | Result |
+| --- | --- | --- |
+| `CRED` | `SALARY CREDIT` | Salary filed as a card payment |
+| `LIC` | `POLICY`, `PUBLIC` | Anything policy-ish filed as insurance |
+| `OLA` | `MOTOROLA`, `CHOCOLATE` | Electronics filed as a cab ride |
+
+If your merchant name reads like a fragment of an ordinary word, use a regex
+with word boundaries and add a case to `TestFalsePositives`:
+
+```yaml
+  - { pattern: '\bCRED\b', category: "Financial > Credit Card Payment", match: regex }
+```
+
+`test_no_contains_pattern_hides_inside_a_common_word` checks new patterns
+against a list of common narration words, so most mistakes fail in CI rather
+than in someone's statement.
+
+---
+
 ### ⚠️ Never commit a real statement
 
 Bank statements contain your name, account number, address, and complete

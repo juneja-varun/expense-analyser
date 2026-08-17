@@ -35,9 +35,17 @@ def media_root(settings, tmp_path):
 
 @pytest.fixture
 def household():
-    return User.objects.create_user(
+    """A household with the category tree but no rules.
+
+    The bundled merchant rules would categorise these fixtures for us, which is
+    the subject of test_builtin_rules.py. Here we want to observe the engine
+    acting on rules the test itself created.
+    """
+    created = User.objects.create_user(
         email="asha@example.com", password="corr3ct-h0rse-b4ttery"
     ).default_household
+    CategoryRule.objects.for_household(created).delete()
+    return created
 
 
 def upload(household) -> Statement:

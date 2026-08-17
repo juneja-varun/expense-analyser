@@ -1,0 +1,185 @@
+# Bundled merchant patterns for Indian statements.
+#
+# These become CategoryRule rows with origin=builtin for every household, so a
+# first upload lands in sensible buckets before anyone configures anything.
+# They are the lowest-priority rules: anything the user writes, and anything
+# learned from their corrections, wins over these.
+#
+# ---------------------------------------------------------------------------
+# Adding a merchant
+# ---------------------------------------------------------------------------
+#
+#   - pattern: SWIGGY          # matched case-insensitively against the narration
+#     category: Food & Dining > Eating Out > Food Delivery
+#     match: contains          # optional, defaults to "contains"
+#
+# `category` is the full path in the default taxonomy (see
+# apps/categories/taxonomy.py). A path that doesn't resolve is skipped, so a
+# household that renamed or deleted a branch simply doesn't get those rules.
+#
+# ---------------------------------------------------------------------------
+# ⚠️ Short names need `match: regex` with word boundaries
+# ---------------------------------------------------------------------------
+#
+# A `contains` match on a short name will fire inside longer words, and the
+# damage is silent — the transaction is quietly filed wrong.
+#
+#   CRED  matches "SALARY CREDIT"        → salary filed as a card payment
+#   LIC   matches "POLICY", "PUBLIC"     → anything policy-related as insurance
+#   OLA   matches "MOTOROLA", "CHOCOLATE"
+#   ACT   matches "TRANSACTION", "CONTACT"
+#
+# If a name is under about six characters, or reads like a fragment of an
+# ordinary English or banking word, use `match: regex` with `\b` on both sides.
+# There are tests in tests/test_builtin_rules.py asserting exactly these cases
+# stay fixed — add one when you add a risky pattern.
+
+patterns:
+  # --- Food delivery ------------------------------------------------------
+  - { pattern: SWIGGY, category: "Food & Dining > Eating Out > Food Delivery" }
+  - { pattern: ZOMATO, category: "Food & Dining > Eating Out > Food Delivery" }
+  - { pattern: EATCLUB, category: "Food & Dining > Eating Out > Food Delivery" }
+  - { pattern: FAASOS, category: "Food & Dining > Eating Out > Food Delivery" }
+
+  # --- Groceries ----------------------------------------------------------
+  - { pattern: BIGBASKET, category: "Food & Dining > Groceries > Online Grocery" }
+  - { pattern: BLINKIT, category: "Food & Dining > Groceries > Online Grocery" }
+  - { pattern: ZEPTO, category: "Food & Dining > Groceries > Online Grocery" }
+  - { pattern: INSTAMART, category: "Food & Dining > Groceries > Online Grocery" }
+  - { pattern: JIOMART, category: "Food & Dining > Groceries > Online Grocery" }
+  - { pattern: DUNZO, category: "Food & Dining > Groceries > Online Grocery" }
+  - { pattern: DMART, category: "Food & Dining > Groceries > Supermarket" }
+  - { pattern: RELIANCE FRESH, category: "Food & Dining > Groceries > Supermarket" }
+  - { pattern: RELIANCE SMART, category: "Food & Dining > Groceries > Supermarket" }
+  - { pattern: SPENCER, category: "Food & Dining > Groceries > Supermarket" }
+  - { pattern: NATURE BASKET, category: "Food & Dining > Groceries > Supermarket" }
+
+  # --- Restaurants and cafes ---------------------------------------------
+  - { pattern: DOMINOS, category: "Food & Dining > Eating Out > Restaurants" }
+  - { pattern: PIZZA HUT, category: "Food & Dining > Eating Out > Restaurants" }
+  - { pattern: MCDONALD, category: "Food & Dining > Eating Out > Restaurants" }
+  - { pattern: BURGER KING, category: "Food & Dining > Eating Out > Restaurants" }
+  - { pattern: BARBEQUE NATION, category: "Food & Dining > Eating Out > Restaurants" }
+  - { pattern: HALDIRAM, category: "Food & Dining > Eating Out > Restaurants" }
+  - { pattern: BEHROUZ, category: "Food & Dining > Eating Out > Restaurants" }
+  - { pattern: STARBUCKS, category: "Food & Dining > Eating Out > Cafes" }
+  - { pattern: CAFE COFFEE DAY, category: "Food & Dining > Eating Out > Cafes" }
+  - { pattern: CHAAYOS, category: "Food & Dining > Eating Out > Cafes" }
+  - { pattern: BLUE TOKAI, category: "Food & Dining > Eating Out > Cafes" }
+  - { pattern: THIRD WAVE COFFEE, category: "Food & Dining > Eating Out > Cafes" }
+
+  # --- Transport ----------------------------------------------------------
+  - { pattern: UBER, category: "Transport > Cabs & Autos" }
+  # OLA also appears inside MOTOROLA, CHOCOLATE, GOLA.
+  - { pattern: '\bOLA\b', category: "Transport > Cabs & Autos", match: regex }
+  - { pattern: RAPIDO, category: "Transport > Cabs & Autos" }
+  - { pattern: INDIAN OIL, category: "Transport > Fuel" }
+  - { pattern: INDIANOIL, category: "Transport > Fuel" }
+  - { pattern: BHARAT PETROLEUM, category: "Transport > Fuel" }
+  - { pattern: HINDUSTAN PETROLEUM, category: "Transport > Fuel" }
+  - { pattern: NAYARA, category: "Transport > Fuel" }
+  # HPCL/BPCL/IOCL are unambiguous as whole words but appear inside longer refs.
+  - { pattern: '\b(HPCL|BPCL|IOCL)\b', category: "Transport > Fuel", match: regex }
+  - { pattern: IRCTC, category: "Transport > Public Transport > Train" }
+  - { pattern: METRO RAIL, category: "Transport > Public Transport > Metro" }
+  - { pattern: '\b(DMRC|BMRCL)\b', category: "Transport > Public Transport > Metro", match: regex }
+  - { pattern: FASTAG, category: "Transport > Vehicle > Parking & Tolls" }
+  - { pattern: NETC, category: "Transport > Vehicle > Parking & Tolls" }
+
+  # --- Shopping -----------------------------------------------------------
+  - { pattern: FLIPKART, category: "Shopping > Online Marketplaces" }
+  - { pattern: MEESHO, category: "Shopping > Online Marketplaces" }
+  - { pattern: SNAPDEAL, category: "Shopping > Online Marketplaces" }
+  # Deliberately not "AMAZON": Amazon Pay is used for utilities, recharges and
+  # wallet loads as often as for shopping, so it would mis-file more than it
+  # fixes. Users teach it from their own statements instead.
+  - { pattern: MYNTRA, category: "Shopping > Clothing" }
+  - { pattern: AJIO, category: "Shopping > Clothing" }
+  - { pattern: PANTALOONS, category: "Shopping > Clothing" }
+  - { pattern: WESTSIDE, category: "Shopping > Clothing" }
+  - { pattern: ZUDIO, category: "Shopping > Clothing" }
+  - { pattern: DECATHLON, category: "Shopping > Clothing" }
+  - { pattern: LIFESTYLE, category: "Shopping > Clothing" }
+  - { pattern: CROMA, category: "Shopping > Electronics" }
+  - { pattern: RELIANCE DIGITAL, category: "Shopping > Electronics" }
+  - { pattern: VIJAY SALES, category: "Shopping > Electronics" }
+
+  # --- Health -------------------------------------------------------------
+  - { pattern: PHARMEASY, category: "Health > Pharmacy" }
+  - { pattern: NETMEDS, category: "Health > Pharmacy" }
+  - { pattern: TATA 1MG, category: "Health > Pharmacy" }
+  - { pattern: APOLLO PHARMACY, category: "Health > Pharmacy" }
+  - { pattern: WELLNESS FOREVER, category: "Health > Pharmacy" }
+  - { pattern: FORTIS, category: "Health > Doctor & Hospital" }
+  - { pattern: MANIPAL HOSPITAL, category: "Health > Doctor & Hospital" }
+  - { pattern: MAX HEALTHCARE, category: "Health > Doctor & Hospital" }
+  - { pattern: PRACTO, category: "Health > Doctor & Hospital" }
+  - { pattern: CULT FIT, category: "Health > Fitness" }
+  - { pattern: CULTFIT, category: "Health > Fitness" }
+
+  # --- Entertainment ------------------------------------------------------
+  - { pattern: NETFLIX, category: "Entertainment > Subscriptions > Streaming" }
+  - { pattern: HOTSTAR, category: "Entertainment > Subscriptions > Streaming" }
+  - { pattern: SONYLIV, category: "Entertainment > Subscriptions > Streaming" }
+  - { pattern: JIOCINEMA, category: "Entertainment > Subscriptions > Streaming" }
+  - { pattern: ZEE5, category: "Entertainment > Subscriptions > Streaming" }
+  - { pattern: SPOTIFY, category: "Entertainment > Subscriptions > Music" }
+  - { pattern: GAANA, category: "Entertainment > Subscriptions > Music" }
+  - { pattern: BOOKMYSHOW, category: "Entertainment > Movies & Events" }
+  - { pattern: '\b(PVR|INOX)\b', category: "Entertainment > Movies & Events", match: regex }
+  - { pattern: INDIGO, category: "Entertainment > Travel & Holidays > Flights" }
+  - { pattern: AIR INDIA, category: "Entertainment > Travel & Holidays > Flights" }
+  - { pattern: VISTARA, category: "Entertainment > Travel & Holidays > Flights" }
+  - { pattern: SPICEJET, category: "Entertainment > Travel & Holidays > Flights" }
+  - { pattern: AKASA AIR, category: "Entertainment > Travel & Holidays > Flights" }
+  - { pattern: MAKEMYTRIP, category: "Entertainment > Travel & Holidays > Hotels" }
+  - { pattern: GOIBIBO, category: "Entertainment > Travel & Holidays > Hotels" }
+  - { pattern: CLEARTRIP, category: "Entertainment > Travel & Holidays > Hotels" }
+  - { pattern: AIRBNB, category: "Entertainment > Travel & Holidays > Hotels" }
+  - { pattern: TREEBO, category: "Entertainment > Travel & Holidays > Hotels" }
+  - { pattern: '\bOYO\b', category: "Entertainment > Travel & Holidays > Hotels", match: regex }
+
+  # --- Utilities and connectivity ----------------------------------------
+  - { pattern: AIRTEL, category: "Housing > Utilities > Internet & Mobile" }
+  - { pattern: ACT FIBERNET, category: "Housing > Utilities > Internet & Mobile" }
+  - { pattern: HATHWAY, category: "Housing > Utilities > Internet & Mobile" }
+  - { pattern: '\b(JIO|BSNL)\b', category: "Housing > Utilities > Internet & Mobile", match: regex }
+  - { pattern: BESCOM, category: "Housing > Utilities > Electricity" }
+  - { pattern: ADANI ELECTRICITY, category: "Housing > Utilities > Electricity" }
+  - { pattern: TATA POWER, category: "Housing > Utilities > Electricity" }
+  - { pattern: '\bBSES\b', category: "Housing > Utilities > Electricity", match: regex }
+  - { pattern: MAHANAGAR GAS, category: "Housing > Utilities > Gas" }
+  - { pattern: INDANE, category: "Housing > Utilities > Gas" }
+
+  # --- Financial ----------------------------------------------------------
+  - { pattern: ZERODHA, category: "Financial > Investments > Stocks" }
+  - { pattern: UPSTOX, category: "Financial > Investments > Stocks" }
+  - { pattern: ANGEL ONE, category: "Financial > Investments > Stocks" }
+  - { pattern: GROWW, category: "Financial > Investments > Mutual Funds" }
+  - { pattern: KUVERA, category: "Financial > Investments > Mutual Funds" }
+  - { pattern: PAYTM MONEY, category: "Financial > Investments > Mutual Funds" }
+  # CRED is a substring of CREDIT, which appears in almost every salary line.
+  - { pattern: '\bCRED\b', category: "Financial > Credit Card Payment", match: regex }
+  - { pattern: CREDIT CARD PAYMENT, category: "Financial > Credit Card Payment" }
+  - { pattern: POLICYBAZAAR, category: "Financial > Insurance Premiums" }
+  - { pattern: STAR HEALTH, category: "Financial > Insurance Premiums" }
+  - { pattern: HDFC LIFE, category: "Financial > Insurance Premiums" }
+  - { pattern: ICICI PRUDENTIAL, category: "Financial > Insurance Premiums" }
+  # LIC is a substring of POLICY, PUBLIC, CLICK.
+  - { pattern: '\bLIC\b', category: "Financial > Insurance Premiums", match: regex }
+
+  # --- Education ----------------------------------------------------------
+  - { pattern: UNACADEMY, category: "Personal > Education" }
+  - { pattern: COURSERA, category: "Personal > Education" }
+  - { pattern: UDEMY, category: "Personal > Education" }
+  - { pattern: VEDANTU, category: "Personal > Education" }
+
+  # --- Cash and income ----------------------------------------------------
+  # ATM withdrawal markers vary by bank: HDFC writes ATW, others NWD or CASH WDL.
+  - { pattern: '\b(ATW|NWD)\b', category: "Cash Withdrawal", match: regex }
+  - { pattern: CASH WDL, category: "Cash Withdrawal" }
+  - { pattern: ATM WDL, category: "Cash Withdrawal" }
+  - { pattern: SALARY, category: "Income > Salary" }
+  - { pattern: DIVIDEND, category: "Income > Interest & Dividends" }
+  - { pattern: INT.CR, category: "Income > Interest & Dividends" }
+  - { pattern: SAVINGS INTEREST, category: "Income > Interest & Dividends" }
