@@ -185,7 +185,7 @@ class TestRecategorising:
 
         client.patch(f"/api/transactions/{txn.pk}/", {"category": delivery.pk}, format="json")
 
-        rule = CategoryRule.objects.for_household(household).get()
+        rule = CategoryRule.objects.for_household(household).get(origin=CategoryRule.Origin.LEARNED)
         assert rule.pattern == "swiggy@examplebank"
         assert rule.category == delivery
         assert rule.origin == CategoryRule.Origin.LEARNED
@@ -200,7 +200,10 @@ class TestRecategorising:
         txn.refresh_from_db()
         assert txn.category is None
         assert txn.is_categorised_by_user is False
-        assert not CategoryRule.objects.for_household(household).exists()
+        learned = CategoryRule.objects.for_household(household).filter(
+            origin=CategoryRule.Origin.LEARNED
+        )
+        assert not learned.exists()
 
     def test_cannot_use_another_households_category(self, client, household, source) -> None:
         stranger = User.objects.create_user(
@@ -216,9 +219,8 @@ class TestRecategorising:
         assert response.status_code == 400
 
     def test_bulk_recategorise_endpoint(self, client, household, source) -> None:
-        CategoryRule.objects.create(
-            household=household, category=category(household, "Food Delivery"), pattern="SWIGGY"
-        )
+        # SWIGGY is already a bundled rule, so no rule is created here — the
+        # point is that the endpoint applies whatever rules the household has.
         make_transaction(household, source, "UPI-SWIGGY-PAY")
 
         response = client.post("/api/transactions/recategorise/", {}, format="json")

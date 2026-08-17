@@ -22,9 +22,17 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def household():
-    return User.objects.create_user(
+    """A household with the category tree but no rules.
+
+    Registration also seeds the bundled merchant rules (see
+    test_builtin_rules.py). These tests are about engine mechanics, so they
+    start from an empty rule set to keep the precedence under test explicit.
+    """
+    created = User.objects.create_user(
         email="asha@example.com", password="corr3ct-h0rse-b4ttery"
     ).default_household
+    CategoryRule.objects.for_household(created).delete()
+    return created
 
 
 @pytest.fixture
@@ -244,6 +252,10 @@ class TestCategoriseTransactions:
         other = User.objects.create_user(
             email="rahul@example.com", password="corr3ct-h0rse-b4ttery"
         ).default_household
+        # Their bundled rules would categorise this correctly for their own
+        # reasons; clearing them leaves my rule as the only one in existence,
+        # so the assertion can only pass if scoping holds.
+        CategoryRule.objects.for_household(other).delete()
         other_source = Source.objects.create(household=other, name="HDFC", kind=Source.Kind.BANK)
         CategoryRule.objects.create(household=household, category=food, pattern="SWIGGY")
         their_txn = make_transaction(other, other_source, "UPI-SWIGGY-PAYMENT")
