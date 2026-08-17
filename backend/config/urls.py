@@ -9,6 +9,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/health/", health, name="health"),
     path("api/auth/", include("apps.accounts.urls")),
+    path("api/", include("config.api_urls")),
 ]
 
 # In production the compiled SPA is served from this same origin. Any path that
