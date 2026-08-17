@@ -7,9 +7,13 @@ from apps.transactions.models import Transaction
 
 
 class TransactionSerializer(serializers.ModelSerializer):
-    category_name = serializers.CharField(source="category.full_name", read_only=True)
-    category_colour = serializers.CharField(source="category.colour", read_only=True)
-    source_name = serializers.CharField(source="source.name", read_only=True)
+    # `default=None` matters: without it DRF drops these keys entirely when the
+    # category is null, so an uncategorised transaction has a different set of
+    # fields from a categorised one. A client then has to handle "absent" and
+    # "null" separately for no reason.
+    category_name = serializers.CharField(source="category.full_name", read_only=True, default=None)
+    category_colour = serializers.CharField(source="category.colour", read_only=True, default=None)
+    source_name = serializers.CharField(source="source.name", read_only=True, default=None)
 
     class Meta:
         model = Transaction

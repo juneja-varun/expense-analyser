@@ -131,12 +131,15 @@ class TransactionViewSet(HouseholdScopedViewSet):
         spent = totals["spent"] or Decimal("0")
         received = totals["received"] or Decimal("0")
 
+        # Serialised as strings, matching how DRF renders the `amount` field.
+        # A bare Decimal in a Response dict is rendered as a JSON float, which
+        # is exactly the precision loss the rest of the codebase avoids.
         return Response(
             {
                 "count": queryset.count(),
-                "spent": abs(spent),
-                "received": received,
-                "net": received + spent,
+                "spent": str(abs(spent)),
+                "received": str(received),
+                "net": str(received + spent),
                 "uncategorised": queryset.filter(category__isnull=True).count(),
             }
         )
