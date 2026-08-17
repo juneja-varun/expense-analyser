@@ -9,8 +9,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from apps.budgets.models import Budget, add_months, first_of_month
+from apps.budgets.models import Budget
 from apps.budgets.services import budget_progress
+from apps.common.dates import add_months, first_of_month
 from apps.common.views import HouseholdScopedViewSet
 
 

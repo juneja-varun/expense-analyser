@@ -9,9 +9,10 @@ from django.db import IntegrityError
 from rest_framework.test import APIClient
 
 from apps.accounts.models import User
-from apps.budgets.models import Budget, add_months, first_of_month
+from apps.budgets.models import Budget
 from apps.budgets.services import budget_progress
 from apps.categories.models import Category
+from apps.common.dates import add_months, first_of_month
 from apps.sources.models import Source
 from apps.transactions.models import Transaction
 

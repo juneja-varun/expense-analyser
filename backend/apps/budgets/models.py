@@ -1,35 +1,11 @@
 from __future__ import annotations
 
-from datetime import date
-
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
+from apps.common.dates import first_of_month
 from apps.common.models import HouseholdScopedModel
-
-
-def first_of_month(value: date) -> date:
-    """Normalise any date to the first of its month.
-
-    Budgets are monthly, so the day is noise. Storing a real `DateField` rather
-    than a year/month pair keeps ordering, range filters and `__gte` lookups
-    working without special cases.
-    """
-    return value.replace(day=1)
-
-
-def add_months(value: date, months: int) -> date:
-    """Shift a date by whole months, from the first of the month.
-
-    Hand-rolled rather than pulling in `python-dateutil`: budgets only ever
-    move between month boundaries, so the general case (what is 31 January plus
-    one month?) never arises here.
-    """
-    zero_based = value.month - 1 + months
-    year = value.year + zero_based // 12
-    month = zero_based % 12 + 1
-    return date(year, month, 1)
 
 
 class Budget(HouseholdScopedModel):

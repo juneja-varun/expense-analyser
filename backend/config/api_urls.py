@@ -11,6 +11,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.budgets.views import BudgetViewSet
 from apps.categories.views import CategoryViewSet
+from apps.insights.views import InsightsViewSet
 from apps.sources.views import SourceViewSet
 from apps.statements.views import StatementViewSet
 from apps.transactions.views import TransactionViewSet
@@ -21,5 +22,6 @@ router.register("transactions", TransactionViewSet, basename="transaction")
 router.register("statements", StatementViewSet, basename="statement")
 router.register("sources", SourceViewSet, basename="source")
 router.register("budgets", BudgetViewSet, basename="budget")
+router.register("insights", InsightsViewSet, basename="insights")
 
 urlpatterns = router.urls

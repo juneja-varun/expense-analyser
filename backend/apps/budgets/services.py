@@ -7,16 +7,13 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
-from django.db.models import Sum
-
 from apps.accounts.models import Household
-from apps.budgets.models import Budget, add_months, first_of_month
+from apps.budgets.models import Budget
 from apps.categories.models import Category
-from apps.transactions.models import Transaction
+from apps.common.dates import first_of_month
+from apps.transactions.services import ZERO, month_spend_by_category
 
-__all__ = ["BudgetProgress", "budget_progress", "month_spend_by_category"]
-
-ZERO = Decimal("0.00")
+__all__ = ["BudgetProgress", "budget_progress", "descendant_ids"]
 
 
 @dataclass(frozen=True)
@@ -45,38 +42,11 @@ class BudgetProgress:
         """
         if self.budgeted == ZERO:
             return 0
-        return int(
-            (self.spent / self.budgeted * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-        )
+        used = self.spent / self.budgeted * 100
+        return int(used.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
-def month_spend_by_category(household: Household, month: date) -> dict[int, Decimal]:
-    """Spend per category for a month, as positive numbers.
-
-    Only debits count: a refund landing in the same category should reduce the
-    month's spend, so credits are netted off rather than ignored — but the
-    result is clamped at zero, because a category that netted positive has not
-    "spent negative money".
-    """
-    start = first_of_month(month)
-    end = add_months(start, 1)
-
-    rows = (
-        Transaction.objects.for_household(household)
-        .filter(txn_date__gte=start, txn_date__lt=end, category__isnull=False)
-        .values("category_id")
-        .annotate(total=Sum("amount"))
-    )
-
-    spend: dict[int, Decimal] = {}
-    for row in rows:
-        # Amounts are signed with debits negative, so flip to get spend.
-        net_spend = -(row["total"] or ZERO)
-        spend[row["category_id"]] = max(net_spend, ZERO)
-    return spend
-
-
-def _descendants(household: Household) -> dict[int, set[int]]:
+def descendant_ids(household: Household) -> dict[int, set[int]]:
     """For each category, itself plus every category beneath it.
 
     Built from one query. Budgeting a parent has to cover its children — a
@@ -114,7 +84,7 @@ def budget_progress(household: Household, month: date) -> list[BudgetProgress]:
         return []
 
     spend = month_spend_by_category(household, start)
-    descendants = _descendants(household)
+    descendants = descendant_ids(household)
 
     progress = [
         BudgetProgress(
