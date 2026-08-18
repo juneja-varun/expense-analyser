@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import Q, Sum
 
 from apps.accounts.models import Household
 from apps.common.dates import month_range
@@ -37,6 +37,13 @@ def month_spend_by_category(
 
     Keyed by category id; `None` is uncategorised spend, included only when
     asked for.
+
+    Uncategorised is deliberately **not** netted. It is not a category but a
+    pile of things the rules could not place, so a credit in it has nothing to
+    do with the debits — a salary landing there does not offset a month of
+    shopping. Netting them cancelled ₹1.3L of real spending against one
+    uncategorised salary credit and dropped the bucket from the chart
+    entirely, so the chart said ₹19k against ₹1.5L actually spent.
     """
     start, end = month_range(month)
 
@@ -46,11 +53,14 @@ def month_spend_by_category(
     if not include_uncategorised:
         queryset = queryset.filter(category__isnull=False)
 
-    rows = queryset.values("category_id").annotate(total=Sum("amount"))
+    rows = queryset.values("category_id").annotate(
+        total=Sum("amount"),
+        debits=Sum("amount", filter=Q(amount__lt=0)),
+    )
 
     spend: dict[int | None, Decimal] = {}
     for row in rows:
         # Amounts are signed with debits negative, so flip to get spend.
-        net_spend = -(row["total"] or ZERO)
-        spend[row["category_id"]] = max(net_spend, ZERO)
+        total = row["debits"] if row["category_id"] is None else row["total"]
+        spend[row["category_id"]] = max(-(total or ZERO), ZERO)
     return spend
