@@ -174,3 +174,52 @@ class TestDetection:
 
     def test_a_non_icici_statement_is_declined(self) -> None:
         assert ICICIBankStatementParser.can_parse(FakeFile("HDFC BANK LTD\n")) == Confidence.NONE
+
+
+class TestBothColumnShapes:
+    """DEPOSITS and WITHDRAWALS are separate columns on paper.
+
+    Text extraction emits nothing for an empty cell, so most statements yield a
+    single amount per row. A statement that fills the unused column with 0.00
+    yields two. Both must work, and the balance decides which figure is real.
+    """
+
+    def test_a_blank_unused_column(self) -> None:
+        statement = parse("01-07-2026 B/F 1,000.00\nSHOP\n02-07-2026 250.00 750.00\n")
+
+        assert statement.transactions[0].amount == Decimal("-250.00")
+
+    def test_a_withdrawal_with_a_zero_deposit_filler(self) -> None:
+        statement = parse("01-07-2026 B/F 1,000.00\nSHOP\n02-07-2026 0.00 250.00 750.00\n")
+
+        assert statement.transactions[0].amount == Decimal("-250.00")
+
+    def test_a_deposit_with_a_zero_withdrawal_filler(self) -> None:
+        """The order that used to break it: the regex took the trailing 0.00 as
+        the amount and refused a perfectly valid row."""
+        statement = parse("01-07-2026 B/F 1,000.00\nSALARY\n02-07-2026 250.00 0.00 1,250.00\n")
+
+        assert statement.transactions[0].amount == Decimal("250.00")
+
+    def test_a_genuine_mismatch_is_still_refused(self) -> None:
+        """Tolerating two figures must not weaken the reconciliation check."""
+        with pytest.raises(ParseError, match="(?i)rather than guess"):
+            parse("01-07-2026 B/F 1,000.00\nSHOP\n02-07-2026 0.00 250.00 900.00\n")
+
+
+class TestTheBalanceChainCatchesMissedRows:
+    def test_a_row_the_parser_cannot_read_fails_the_next_one(self) -> None:
+        """A useful property of reconciling against the balance: if a row is
+        silently skipped, the following row's movement no longer matches its
+        printed amount, so the statement is refused rather than importing a
+        subset that looks complete.
+        """
+        with pytest.raises(ParseError, match="(?i)rather than guess"):
+            parse(
+                "01-07-2026 B/F 1,000.00\n"
+                "A\n02-07-2026 100.00 900.00\n"
+                # A row in a shape the parser does not recognise, so it is
+                # treated as description text rather than a transaction.
+                "B 03-07-2026 unreadable row 400.00\n"
+                "C\n04-07-2026 300.00 200.00\n"
+            )

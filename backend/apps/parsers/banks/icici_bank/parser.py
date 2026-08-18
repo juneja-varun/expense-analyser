@@ -48,10 +48,14 @@ from apps.parsers.utils.dates import parse_date, parse_date_or_none
 AMOUNT = r"[\d,]+\.\d{2}"
 
 # A transaction row: date, optional inline particulars, amount, running balance.
+# DEPOSITS and WITHDRAWALS are separate columns on paper. Text extraction emits
+# nothing for an empty cell, so most rows arrive with a single amount — but a
+# statement that fills the unused column with 0.00 produces two. Capture either
+# shape; which of them is the real figure is decided by the balance, below.
 TRANSACTION_ROW = re.compile(
     rf"^\s*(?P<date>\d{{2}}-\d{{2}}-\d{{4}})\s+"
     rf"(?P<particulars>.*?)\s*"
-    rf"(?P<amount>{AMOUNT})\s+(?P<balance>{AMOUNT})\s*$"
+    rf"(?P<amounts>{AMOUNT}(?:\s+{AMOUNT})?)\s+(?P<balance>{AMOUNT})\s*$"
 )
 
 # The brought-forward row carries the opening balance and no amount.
@@ -195,7 +199,7 @@ class ICICIBankStatementParser(BaseParser):
         self, row: re.Match[str], pending: list[str], previous_balance: Decimal | None
     ) -> tuple[ParsedTransaction, Decimal]:
         balance = parse_amount(row.group("balance"))
-        printed = parse_amount(row.group("amount"))
+        printed = [parse_amount(value) for value in row.group("amounts").split()]
 
         if previous_balance is None:
             raise ParseError(
@@ -203,13 +207,19 @@ class ICICIBankStatementParser(BaseParser):
                 "apart from withdrawals. Please report this statement layout."
             )
 
-        # The sign the columns don't survive extraction to tell us.
+        # The direction the columns do not survive extraction to tell us.
         amount = balance - previous_balance
 
-        if abs(amount) != printed:
+        # Accept the row if any printed figure agrees with the movement: a
+        # single amount when the unused column is blank, or one of two when it
+        # is filled with 0.00. A row where none agrees means a row was missed
+        # or misread — the balance chain then no longer reconciles, and every
+        # later row would be wrong too, so it is refused rather than guessed at.
+        if not any(abs(amount) == value for value in printed):
+            shown = " and ".join(str(value) for value in printed)
             raise ParseError(
                 f"On {row.group('date')} the running balance moves by {abs(amount)} but "
-                f"the statement prints {printed}. Rather than guess which is right, this "
+                f"the statement prints {shown}. Rather than guess which is right, this "
                 "row is being refused — please report it."
             )
 
