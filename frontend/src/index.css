@@ -378,3 +378,221 @@ code {
   display: block;
   font-size: 0.78rem;
 }
+
+/* --- Charts --------------------------------------------------------------
+   Series colours come from the validated categorical palette (slots 1 and 2),
+   with dark-mode steps chosen for the dark surface rather than flipped. Both
+   pass CVD separation, the normal-vision floor and 3:1 contrast in both modes.
+   -------------------------------------------------------------------------- */
+
+:root {
+  --series-received: #2a78d6;
+  --series-spent: #eb6834;
+  --series-single: #2a78d6;
+  --chart-axis: #d8d8d2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --series-received: #3987e5;
+    --series-spent: #d95926;
+    --series-single: #3987e5;
+    --chart-axis: #3a3a42;
+  }
+}
+
+:root[data-theme="dark"] {
+  --series-received: #3987e5;
+  --series-spent: #d95926;
+  --series-single: #3987e5;
+  --chart-axis: #3a3a42;
+}
+
+.chart {
+  margin: 0;
+}
+
+.chart__svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.chart__caption,
+.chart__legend {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  margin-bottom: 0.75rem;
+}
+
+.chart__total {
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.legend__item {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.legend__swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 3px;
+}
+
+.legend__swatch--received {
+  background: var(--series-received);
+}
+
+.legend__swatch--spent {
+  background: var(--series-spent);
+}
+
+/* Text wears text tokens, never the series colour. */
+.chart__label {
+  font-size: 11px;
+  fill: var(--muted);
+}
+
+.chart__value {
+  font-size: 11px;
+  fill: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart__axis {
+  stroke: var(--chart-axis);
+  stroke-width: 1;
+}
+
+.chart__bar {
+  fill: var(--series-single);
+  transition: opacity 0.12s;
+}
+
+.chart__bar--hover {
+  opacity: 0.82;
+}
+
+.chart__bar--received {
+  fill: var(--series-received);
+}
+
+.chart__bar--spent {
+  fill: var(--series-spent);
+}
+
+.chart__hit {
+  cursor: default;
+}
+
+.chart__readout {
+  min-height: 1.4rem;
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+/* --- Budgets ------------------------------------------------------------- */
+
+.budgets {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.budget + .budget {
+  margin-top: 1rem;
+}
+
+.budget__head {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  font-size: 0.88rem;
+}
+
+.budget__figure {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.budget__track {
+  height: 7px;
+  margin: 0.35rem 0 0.25rem;
+  overflow: hidden;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.budget__fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.2s;
+}
+
+.budget__fill--over {
+  background: var(--danger);
+}
+
+.budget__meta {
+  margin: 0;
+}
+
+.budget-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.budget-form select,
+.budget-form input {
+  flex: 1 1 8rem;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.budget-form button,
+.toolbar button {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.budget-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.month-picker {
+  padding: 0.4rem 0.55rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
