@@ -29,6 +29,21 @@ _VPA_TOKEN = re.compile(r"^[a-z0-9][a-z0-9._]{1,60}@[a-z][a-z0-9.]{1,30}$", re.I
 
 _WHITESPACE = re.compile(r"\s+")
 
+# ICICI (and several other banks) end a UPI narration with the routing details:
+#
+#   <PAYEE> UPI/<payee>/<vpa>/<note>/<REMITTER BANK>/<reference>/<txn id>/
+#
+# The bank in that tail is how the money travelled, not who was paid — and it
+# is a bank or wallet name, which is exactly what merchant patterns look for.
+# Left in place, `CONTAINS "AIRTEL"` files every transfer routed through Airtel
+# Payments Bank as an internet bill, and an `AMAZON` pattern would catch
+# anything funded from Amazon Pay's RBL account. Both are silent: the amount is
+# right, so nothing looks wrong until a budget is inexplicably over.
+#
+# The bank name is truncated by the statement itself (`YES BANK L`,
+# `Kotak Mahi`), so it is matched by position rather than by name.
+_RAIL_TAIL = re.compile(r"/[A-Za-z][A-Za-z .&-]{2,24}/\d{9,}/[A-Za-z0-9 ]+/?\s*$")
+
 
 def normalise_for_matching(description: str) -> str:
     """Upper-case, whitespace-collapsed form used for matching only.
@@ -37,6 +52,17 @@ def normalise_for_matching(description: str) -> str:
     own transactions.
     """
     return _WHITESPACE.sub(" ", description).strip().upper()
+
+
+def matchable_text(description: str) -> str:
+    """The part of a narration that says what was paid for.
+
+    Rules match against this rather than the raw description, so a rule
+    describes what you bought and not which bank moved the money. The stored
+    description is untouched — users need to recognise their own transactions,
+    reference numbers and all.
+    """
+    return _RAIL_TAIL.sub("", description).rstrip("/ ")
 
 
 def extract_vpa(description: str) -> str | None:
@@ -140,7 +166,7 @@ class CategoryRule(HouseholdScopedModel):
         if self.match_type == self.MatchType.UPI_VPA:
             return extract_vpa(description) == self.pattern
 
-        haystack = normalise_for_matching(description)
+        haystack = normalise_for_matching(matchable_text(description))
         needle = normalise_for_matching(self.pattern)
 
         if self.match_type == self.MatchType.CONTAINS:
@@ -151,7 +177,9 @@ class CategoryRule(HouseholdScopedModel):
             return haystack.startswith(needle)
         if self.match_type == self.MatchType.REGEX:
             try:
-                return re.search(self.pattern, description, re.IGNORECASE) is not None
+                return (
+                    re.search(self.pattern, matchable_text(description), re.IGNORECASE) is not None
+                )
             except re.error:
                 # A rule saved before a Python regex change, or edited in the
                 # database directly. One broken rule must not stop the rest

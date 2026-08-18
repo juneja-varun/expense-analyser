@@ -85,7 +85,21 @@ NOISE = re.compile(
 
 # A reference tail belonging to the row above: bank/UPI plumbing, no letters a
 # person would recognise as a payee.
-REFERENCE_TAIL = re.compile(r"^[A-Z0-9]*(BANK|/)[A-Z0-9/@.\-]*$", re.IGNORECASE)
+#
+# Two shapes, because the space is what separates them from a merchant name:
+#
+#   BANK/656022356612/APL019f5a38957d658276d0afc0bd956488/   no spaces at all
+#   MMT/IMPS/619521828164/SIMMI SHAR/CNRB0001387            spaces, but carries
+#                                                            a reference number
+#
+# The second shape needs the digit run to earn its spaces. Without that guard
+# the pattern also swallows the *next* transaction's merchant — "Euronet
+# Services India Pvt Ltd" is a payee, not plumbing — and that row would then
+# be left with no description at all.
+REFERENCE_TAIL = re.compile(
+    r"^(?:[A-Z0-9]*(?:BANK|/)[A-Z0-9/@.\-]*" r"|(?=.*\d{6})[A-Z0-9 ]*/[A-Z0-9/@.\- ]*)$",
+    re.IGNORECASE,
+)
 
 
 class ICICIBankStatementParser(BaseParser):
