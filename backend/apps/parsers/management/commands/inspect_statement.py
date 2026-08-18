@@ -124,15 +124,37 @@ class Command(BaseCommand):
         self.stdout.write(f"  total debits  {statement.total_debits}")
         self.stdout.write(f"  total credits {statement.total_credits}")
 
-        self.stdout.write(self.style.MIGRATE_HEADING(f"\nFirst {options['rows']} transactions"))
-        for transaction in statement.transactions[: options["rows"]]:
-            description = clean(transaction.description)[:46]
-            self.stdout.write(
-                f"  {transaction.txn_date}  {transaction.amount!s:>12}  {description}"
-            )
+        debits = [t for t in statement.transactions if t.amount < 0]
+        credits = [t for t in statement.transactions if t.amount > 0]
+        self.stdout.write(f"  money out    {len(debits)} rows")
+        self.stdout.write(f"  money in     {len(credits)} rows")
+
+        # Shown from both ends: salary and other credits usually land at the end
+        # of a month, so a first-N-only view would miss exactly the rows most
+        # worth checking.
+        self._show_rows(statement.transactions, options["rows"], clean)
 
         self.stdout.write(
             "\n  Check these against the statement itself: dates in the right order, "
             "amounts signed correctly (money out negative), and the closing balance "
             "matching.\n"
         )
+
+    def _show_rows(self, transactions: list, limit: int, clean) -> None:
+        def render(rows) -> None:
+            for transaction in rows:
+                description = clean(transaction.description)[:46]
+                self.stdout.write(
+                    f"  {transaction.txn_date}  {transaction.amount!s:>12}  {description}"
+                )
+
+        if len(transactions) <= limit * 2:
+            self.stdout.write(self.style.MIGRATE_HEADING("\nTransactions"))
+            render(transactions)
+            return
+
+        self.stdout.write(self.style.MIGRATE_HEADING(f"\nFirst {limit} transactions"))
+        render(transactions[:limit])
+        self.stdout.write(f"\n  ... {len(transactions) - limit * 2} more ...\n")
+        self.stdout.write(self.style.MIGRATE_HEADING(f"Last {limit} transactions"))
+        render(transactions[-limit:])
