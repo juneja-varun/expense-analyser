@@ -52,11 +52,11 @@ class TestIciciBankStatementIsNotACardStatement:
         )
         assert ICICICreditCardParser.can_parse(card) == Confidence.STRONG
 
-    def test_nothing_claims_an_icici_savings_statement_yet(self) -> None:
-        """Until an ICICI bank parser exists, the honest answer is "we can't
-        read this" — not a wrong one."""
-        with pytest.raises(NoParserFound):
-            detect_parser(FakeFile(ICICI_BANK_STATEMENT))
+    def test_a_savings_statement_routes_to_the_savings_parser(self) -> None:
+        """Originally this asserted that *nothing* claimed the file, back when
+        no ICICI bank parser existed. The parser now exists; what must stay
+        true is that the file never reaches the credit-card parser."""
+        assert detect_parser(FakeFile(ICICI_BANK_STATEMENT)).bank_slug == "icici_bank"
 
 
 class TestWeakMatchesAreNotDispatched:

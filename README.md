@@ -71,7 +71,7 @@ Full guide: [CONTRIBUTING.md](CONTRIBUTING.md).
 | Bank | Savings/current | Credit card | Formats |
 | --- | --- | --- | --- |
 | HDFC Bank | ✅ | — | `xls` (delimited export), `csv`, `txt` |
-| ICICI Bank | — | ✅ | `pdf` (incl. password-protected) |
+| ICICI Bank | ✅ | ✅ | `pdf` (incl. password-protected) |
 
 Adding yours is the most useful contribution you can make, and the codebase is
 arranged specifically to make it cheap. Start with
