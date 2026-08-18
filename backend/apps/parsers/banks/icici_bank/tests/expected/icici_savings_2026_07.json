@@ -1,0 +1,62 @@
+{
+  "bank_slug": "icici_bank",
+  "statement_kind": "bank",
+  "source_hint": "XXXXXXXX0136",
+  "period_start": "2026-07-01",
+  "period_end": "2026-07-31",
+  "opening_balance": "335678.35",
+  "closing_balance": "458026.45",
+  "transaction_count": 6,
+  "total_debits": "-3950.90",
+  "total_credits": "126299.00",
+  "transactions": [
+    {
+      "txn_date": "2026-07-01",
+      "value_date": null,
+      "description": "Amazon Pay Groceries UPI/Amazon Pay/amazonpaygroce/You are pa/AXIS BANK/000000000000/APL000000000000000000000000000 000/",
+      "amount": "-691.00",
+      "balance": "334987.35",
+      "reference": null
+    },
+    {
+      "txn_date": "2026-07-02",
+      "value_date": null,
+      "description": "Amazon India UPI/Amazon Ind/amazon@yapl/You are pa/YES BANK L/000000000000/APY000000000000000000000000000000/",
+      "amount": "-1649.00",
+      "balance": "333338.35",
+      "reference": null
+    },
+    {
+      "txn_date": "2026-07-03",
+      "value_date": null,
+      "description": "Test Digital Services Pvt Ltd UPI/Test Digital/testrecharge@o/UPI/AXIS BANK/000000000000/ICI000000000000000000000000000 000/",
+      "amount": "-350.90",
+      "balance": "332987.45",
+      "reference": null
+    },
+    {
+      "txn_date": "2026-07-03",
+      "value_date": null,
+      "description": "TEST RESTAURANT UPI/TEST RESTAURANT/testrest.000000/Payment By/HDFC BANK/000000000000/ICI000000000000000000000000000 000/",
+      "amount": "-1260.00",
+      "balance": "331727.45",
+      "reference": null
+    },
+    {
+      "txn_date": "2026-07-05",
+      "value_date": null,
+      "description": "SALARY TESTCORP PVT LTD NEFT-TESTCORP-000000000",
+      "amount": "125000.00",
+      "balance": "456727.45",
+      "reference": null
+    },
+    {
+      "txn_date": "2026-07-06",
+      "value_date": null,
+      "description": "TEST REFUND UPI/TEST REFUND/refund@testbank/Refund/ICICI BANK",
+      "amount": "1299.00",
+      "balance": "458026.45",
+      "reference": null
+    }
+  ]
+}
