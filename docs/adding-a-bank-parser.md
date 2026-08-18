@@ -24,20 +24,29 @@ routinely mislabelled — HDFC's "Download as XLS" produces a **tab-delimited
 text file** with an `.xls` extension, not a spreadsheet.
 
 ```bash
-cd backend
-poetry run python - <<'PY'
-from pathlib import Path
-from apps.parsers.base import ParsedFile
-
-f = ParsedFile(path=Path("~/Downloads/statement.xls").expanduser())
-print("extension:", f.extension)
-print(f.text[:2000])
-PY
+make inspect FILE=~/Downloads/statement.xls
+# password-protected PDF? add the password:
+make inspect FILE=~/Downloads/statement.pdf PASSWORD=name0203
 ```
 
-For a PDF this prints the extracted text layer. If it prints nothing, the file
-is a scan — those aren't supported, and the parser should say so rather than
-crash.
+This stores nothing — it reads the file, reports on it, and forgets it. Output
+is **redacted by default** (account numbers, emails, phone numbers and PANs
+masked), so it is safe to paste into an issue; names are not detectable, so
+give it a glance first. `--raw` disables redaction for local viewing only.
+
+It tells you three things:
+
+- whether any existing parser recognises the file, and how confidently
+- the extracted text layer — the layout your parser has to read
+- if something does parse it, the rows produced, so you can check them against
+  the statement itself
+
+**"No parser recognised this file" is the useful case** — the layout printed
+underneath is your specification.
+
+If the text layer is empty, the PDF is a scan with no text in it. Those aren't
+supported (no OCR); download the original from net banking rather than a
+printed-and-scanned copy.
 
 Note four things:
 
