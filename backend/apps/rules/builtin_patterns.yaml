@@ -182,4 +182,7 @@ patterns:
   - { pattern: SALARY, category: "Income > Salary" }
   - { pattern: DIVIDEND, category: "Income > Interest & Dividends" }
   - { pattern: INT.CR, category: "Income > Interest & Dividends" }
+  # ICICI prints credited savings interest as "Int.Pd" (interest paid to you).
+  # Bounded: a bare substring also matches PRINT.PDF and friends.
+  - { pattern: '\bINT\.PD\b', match: regex, category: "Income > Interest & Dividends" }
   - { pattern: SAVINGS INTEREST, category: "Income > Interest & Dividends" }

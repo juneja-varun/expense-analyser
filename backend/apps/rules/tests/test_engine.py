@@ -324,11 +324,30 @@ class TestLearning:
         ("description", "expected"),
         [
             ("UPI-SWIGGY-PAYMENT", "SWIGGY"),
-            ("POS 000000000000 IRCTC ONLINE", "ONLINE"),
+            ("POS 000000000000 IRCTC ONLINE", "IRCTC"),
             ("ACH D- HDFC LIFE INSURANCE", "INSURANCE"),
             ("NEFT DR 123456", None),
             ("UPI TO REF TXN", None),
         ],
     )
     def test_distinctive_fragment(self, description, expected) -> None:
+        assert distinctive_fragment(description) == expected
+
+    @pytest.mark.parametrize(
+        ("description", "expected"),
+        [
+            # The payee leads and the rail trails, so the longest word is the
+            # wrong pick. Each of these came from a real ICICI statement.
+            ("CHAI HAI NA UPI/CHAI HAI N/paytm.d1088744/UPI/AXIS", "CHAI"),
+            ("THE JUICY SCOOP UPI/THE JUICY/q121481771@ybl/UPI/YES BANK", "JUICY"),
+            ("CMS TRANSACTION CMS/ CMS5739637210/ACUVER CONS", "ACUVER"),
+        ],
+    )
+    def test_learns_the_payee_not_the_payment_rail(self, description, expected) -> None:
+        """Regression: these used to learn PAYTM, JUICY and TRANSACTION.
+
+        A rule learned from the rail is actively harmful — one tea shop paid via
+        Paytm would recategorise every future Paytm transaction, and
+        `CONTAINS "TRANSACTION"` matches most narrations ever written.
+        """
         assert distinctive_fragment(description) == expected
