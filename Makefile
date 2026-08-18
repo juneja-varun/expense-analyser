@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help setup dev dev-backend dev-frontend migrate migrations superuser \
         test test-backend test-frontend lint format check build clean \
-        regenerate-goldens check-fixtures migrations-check \
+        regenerate-goldens check-fixtures migrations-check inspect \
         docker-up docker-down
 
 BACKEND := cd backend && poetry run
@@ -61,6 +61,13 @@ test: test-backend test-frontend ## Run all tests
 
 test-backend: ## Run the Python test suite
 	$(BACKEND) pytest
+
+inspect: ## Diagnose a statement file: make inspect FILE=~/statement.pdf [PASSWORD=x]
+	@test -n "$(FILE)" || { echo "Usage: make inspect FILE=~/statement.pdf [PASSWORD=xxxx]"; exit 1; }
+	@# abspath: the recipe cds into backend/, so a path relative to the repo
+	@# root would otherwise resolve against the wrong directory.
+	$(BACKEND) python manage.py inspect_statement "$(abspath $(FILE))" \
+		$(if $(PASSWORD),--password "$(PASSWORD)",)
 
 migrations-check: ## Fail if a model change has no migration
 	$(BACKEND) python manage.py makemigrations --check --dry-run \
