@@ -596,3 +596,123 @@ code {
   border: 1px solid var(--border);
   border-radius: 6px;
 }
+
+/* --- Rule dialog ---------------------------------------------------------
+   Writing a rule is the one place in the app where a wrong click has reach:
+   a pattern can recategorise years of history at once. The layout gives the
+   preview as much room as the inputs for exactly that reason.
+   -------------------------------------------------------------------------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: color-mix(in srgb, #000 45%, transparent);
+}
+
+.modal {
+  width: min(34rem, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.modal h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+}
+
+.modal label {
+  display: block;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.modal label > span {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.modal select,
+.modal input {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.modal label > select {
+  width: 100%;
+}
+
+.rule-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* The pattern is what the user is really editing, so it takes the slack. */
+.rule-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.rule-preview {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.rule-preview ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+}
+
+.rule-preview li {
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+}
+
+.rule-preview .small {
+  display: inline;
+}
+
+.modal__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+
+button.secondary {
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
+/* An inline affordance in a dense table: a button that reads as a link. */
+button.link {
+  padding: 0;
+  margin-left: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+button.link:hover {
+  text-decoration: underline;
+}
