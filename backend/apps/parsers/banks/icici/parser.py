@@ -65,17 +65,35 @@ class ICICICreditCardParser(BaseParser):
     statement_kind = "credit_card"
     file_formats = ["pdf"]
 
+    # Phrases that mark a savings/current account statement. ICICI issues both,
+    # and the two layouts are nothing alike — a bank statement handed to this
+    # parser read the closing balance as the transaction amount and turned a
+    # salary credit into a large debit, without failing.
+    BANK_STATEMENT_MARKERS = (
+        "savings account",
+        "current account",
+        "statement of transactions",
+        "withdrawals",
+        "deposits",
+    )
+
     @classmethod
     def can_parse(cls, file: ParsedFile) -> Confidence:
         text = file.head.lower()
         if "icici" not in text:
             return Confidence.NONE
+
+        # Rule this parser out explicitly rather than scoring low: a wrong
+        # parser that succeeds is far worse than one that declines.
+        if any(marker in text for marker in cls.BANK_STATEMENT_MARKERS):
+            return Confidence.NONE
+
         if "credit card statement" in text:
             return Confidence.STRONG
         if "card number" in text or "payment due date" in text:
             return Confidence.LIKELY
-        # An ICICI document of some kind, but not evidently a card statement —
-        # the bank-statement parser may be the better match.
+        # An ICICI document of some kind, but not evidently a card statement.
+        # Below the auto-dispatch bar, so the user is asked rather than guessed at.
         return Confidence.WEAK
 
     def parse(self, file: ParsedFile) -> ParsedStatement:

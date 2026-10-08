@@ -37,6 +37,8 @@ class CategorisationResult:
     categorised: int
     unmatched: int
     skipped_user_categorised: int
+    cleared: int = 0
+    """Rule-assigned categories removed because no rule claims them any more."""
 
     @property
     def total(self) -> int:
@@ -96,6 +98,7 @@ def categorise_transactions(
     categorised = 0
     unmatched = 0
     skipped = 0
+    cleared = 0
     to_update: list[Transaction] = []
     match_counts: dict[int, int] = {}
 
@@ -107,6 +110,16 @@ def categorise_transactions(
         rule = categorise(txn.description, rules) if rules else None
         if rule is None:
             unmatched += 1
+            # A category that came from a rule is only ever as good as that
+            # rule. When the rule is deleted, corrected, or — as happened here
+            # — fixed to stop matching something it never should have, the
+            # category it assigned has to go with it. Leaving it means fixing a
+            # bad rule silently changes nothing, and the wrong number stays in
+            # the budget forever.
+            if txn.category_id is not None:
+                txn.category_id = None
+                to_update.append(txn)
+                cleared += 1
             continue
 
         if txn.category_id != rule.category_id:
@@ -127,6 +140,7 @@ def categorise_transactions(
         categorised=categorised,
         unmatched=unmatched,
         skipped_user_categorised=skipped,
+        cleared=cleared,
     )
 
 
@@ -169,31 +183,70 @@ def learn_from_recategorisation(
     return rule
 
 
-# Words that appear in most narrations and identify nothing on their own.
+# Words that identify a payment rail, a bank or a document type rather than a
+# payee. Learning on any of these produces a rule that fires far too widely —
+# a tea shop paid through Paytm would otherwise teach "PAYTM" and recategorise
+# every Paytm transaction, and a salary credited via CMS would teach
+# "TRANSACTION".
 NOISE_TOKENS = frozenset(
     {
+        # instruments and document words
         "ACH",
         "ATM",
         "ATW",
+        "CMS",
         "CREDIT",
         "CR",
         "DEBIT",
         "DR",
-        "FROM",
+        "ECS",
         "IMPS",
-        "INR",
-        "LIMITED",
-        "LTD",
+        "INTENT",
+        "NACH",
         "NEFT",
         "PAYMENT",
         "POS",
-        "PVT",
         "REF",
         "RTGS",
-        "TO",
+        "TRANSACTION",
         "TRANSFER",
         "TXN",
         "UPI",
+        "UPIINTENT",
+        # corporate suffixes
+        "INR",
+        "LIMITED",
+        "LTD",
+        "PRIVATE",
+        "PVT",
+        # rails, wallets and banks — these name the pipe, not the payee
+        "AXIS",
+        "BANK",
+        "HDFC",
+        "ICICI",
+        "KOTAK",
+        "PAYTM",
+        "SBIN",
+        "STATE",
+        "YESB",
+        # prepositions that survive tokenising
+        "FROM",
+        "TO",
+        # words common enough that a CONTAINS rule on them would reach far
+        # past the merchant that taught it — "LIFE" from HDFC LIFE INSURANCE
+        # would also file every Lifestyle purchase as insurance.
+        "AGENCIES",
+        "ENTERPRISES",
+        "GLOBAL",
+        "INDIA",
+        "LIFE",
+        "ONLINE",
+        "RETAIL",
+        "SERVICES",
+        "SHOP",
+        "SOLUTIONS",
+        "STORE",
+        "TRADERS",
     }
 )
 
@@ -205,12 +258,13 @@ _NON_ALPHA = re.compile(r"[^A-Za-z]+")
 def distinctive_fragment(description: str) -> str | None:
     """The most identifying word in a narration.
 
-    Picks the longest alphabetic token that is neither a banking keyword nor
-    part of a reference number, so `UPI-SWIGGY-...-PAYMENT` yields `SWIGGY`.
+    Takes the **first** qualifying token rather than the longest. Both statement
+    formats put the payee at the front — `CHAI HAI NA UPI/...` and
+    `UPI-SWIGGY-PAYMENT` — while the longest word is usually further right and
+    belongs to the plumbing: `CHAI HAI NA UPI/CHAI HAI N/paytm.d1088744/UPI/AXIS`
+    used to learn "PAYTM".
     """
-    tokens = [
-        token
-        for token in _NON_ALPHA.split(normalise_for_matching(description))
-        if len(token) >= MIN_FRAGMENT_LENGTH and token not in NOISE_TOKENS
-    ]
-    return max(tokens, key=len) if tokens else None
+    for token in _NON_ALPHA.split(normalise_for_matching(description)):
+        if len(token) >= MIN_FRAGMENT_LENGTH and token not in NOISE_TOKENS:
+            return token
+    return None

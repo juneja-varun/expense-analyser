@@ -117,6 +117,7 @@ class TransactionViewSet(HouseholdScopedViewSet):
                 "categorised": result.categorised,
                 "unmatched": result.unmatched,
                 "skipped_user_categorised": result.skipped_user_categorised,
+                "cleared": result.cleared,
             }
         )
 

@@ -18,6 +18,16 @@ from apps.parsers.base import BaseParser, Confidence, NoParserFound, ParsedFile,
 
 logger = logging.getLogger(__name__)
 
+MIN_AUTO_DETECT = Confidence.LIKELY
+"""Confidence required to parse a file without asking the user.
+
+WEAK means "plausible shape, no positive identification" — and acting on that
+is worse than refusing. A statement routed to the wrong parser does not fail
+loudly; it produces confident, wrong numbers (an ICICI savings statement handed
+to the credit-card parser read the closing balance as the transaction amount).
+Below this bar the user picks the bank.
+"""
+
 BANKS_PACKAGE = "apps.parsers.banks"
 BANKS_DIR = Path(__file__).parent / "banks"
 
@@ -129,6 +139,15 @@ def detect_parser(file: ParsedFile) -> type[BaseParser]:
         raise NoParserFound(
             f"No parser recognised {file.filename}. If your bank isn't supported yet, "
             "see docs/adding-a-bank-parser.md — or open a bank support request."
+        )
+
+    best, confidence = ranked[0]
+    if confidence < MIN_AUTO_DETECT:
+        names = ", ".join(f"{p.display_name}" for p, _ in ranked[:3])
+        raise NoParserFound(
+            f"{file.filename} looks like it might be from {names}, but not clearly "
+            "enough to be sure. Please pick the bank manually — guessing risks "
+            "importing the wrong numbers."
         )
 
     if len(ranked) > 1 and ranked[0][1] == ranked[1][1]:

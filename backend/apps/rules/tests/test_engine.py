@@ -13,7 +13,7 @@ from apps.rules.engine import (
     distinctive_fragment,
     learn_from_recategorisation,
 )
-from apps.rules.models import CategoryRule, extract_vpa
+from apps.rules.models import CategoryRule, extract_vpa, matchable_text
 from apps.sources.models import Source
 from apps.transactions.models import Transaction
 
@@ -324,7 +324,7 @@ class TestLearning:
         ("description", "expected"),
         [
             ("UPI-SWIGGY-PAYMENT", "SWIGGY"),
-            ("POS 000000000000 IRCTC ONLINE", "ONLINE"),
+            ("POS 000000000000 IRCTC ONLINE", "IRCTC"),
             ("ACH D- HDFC LIFE INSURANCE", "INSURANCE"),
             ("NEFT DR 123456", None),
             ("UPI TO REF TXN", None),
@@ -332,3 +332,109 @@ class TestLearning:
     )
     def test_distinctive_fragment(self, description, expected) -> None:
         assert distinctive_fragment(description) == expected
+
+    @pytest.mark.parametrize(
+        ("description", "expected"),
+        [
+            # The payee leads and the rail trails, so the longest word is the
+            # wrong pick. Each of these came from a real ICICI statement.
+            ("CHAI HAI NA UPI/CHAI HAI N/paytm.d1088744/UPI/AXIS", "CHAI"),
+            ("THE JUICY SCOOP UPI/THE JUICY/q121481771@ybl/UPI/YES BANK", "JUICY"),
+            ("CMS TRANSACTION CMS/ CMS5739637210/ACUVER CONS", "ACUVER"),
+        ],
+    )
+    def test_learns_the_payee_not_the_payment_rail(self, description, expected) -> None:
+        """Regression: these used to learn PAYTM, JUICY and TRANSACTION.
+
+        A rule learned from the rail is actively harmful — one tea shop paid via
+        Paytm would recategorise every future Paytm transaction, and
+        `CONTAINS "TRANSACTION"` matches most narrations ever written.
+        """
+        assert distinctive_fragment(description) == expected
+
+
+class TestRoutingDetailsDoNotDecideCategories:
+    """ICICI narrations end with the bank that moved the money.
+
+    Those tails are full of bank and wallet names, which is exactly what
+    merchant patterns look for. Matching against them is silent and wrong: the
+    amount is right, so nothing looks broken until a budget is inexplicably
+    over. Found by importing two real months of statements.
+    """
+
+    def test_a_person_paid_via_a_payments_bank_is_not_an_internet_bill(
+        self, household, food
+    ) -> None:
+        rule = CategoryRule.objects.create(household=household, category=food, pattern="AIRTEL")
+        routed_through_airtel = (
+            "jishanmalik15233 okicici UPI/jishanmali/jishanmalik152/UPI/"
+            "AIRTEL PAY/618593247610/ICI9d89890ddf364735b532b7d8c3a39d3f/"
+        )
+
+        assert rule.matches(routed_through_airtel) is False
+
+    def test_but_the_real_merchant_still_matches(self, household, food) -> None:
+        rule = CategoryRule.objects.create(household=household, category=food, pattern="AIRTEL")
+        actual_airtel_bill = (
+            "Airtel UPI/Airtel/airtel4.payu@i/Upi Mandat/ICICI Bank/618519453610/ICIabc123/"
+        )
+
+        assert rule.matches(actual_airtel_bill) is True
+
+    def test_the_vpa_survives_stripping(self, household) -> None:
+        """The VPA sits before the tail, and is the most reliable identifier."""
+        narration = "Netflix UPI/Netflix/netflix.bd@axi/MandateExe/AXIS BANK/123456789012/ICIx/"
+
+        assert extract_vpa(narration) == "netflix.bd@axi"
+
+    def test_a_narration_without_a_tail_is_left_alone(self) -> None:
+        plain = "CMS TRANSACTION CMS/ CMS5794598716/ACUVER CONSULTING PVT LTD"
+
+        assert matchable_text(plain) == plain
+
+    def test_the_stored_description_is_never_modified(self, household, source, food) -> None:
+        """Users recognise their transactions by the full narration."""
+        narration = "Airtel UPI/Airtel/airtel4.payu@i/Upi Mandat/ICICI Bank/618519453610/ICIabc/"
+        txn = make_transaction(household, source, narration)
+
+        CategoryRule.objects.create(household=household, category=food, pattern="AIRTEL")
+        categorise_transactions(household)
+
+        txn.refresh_from_db()
+        assert txn.description == narration
+
+
+class TestFixingARuleUndoesItsDamage:
+    """Otherwise correcting a bad rule silently changes nothing.
+
+    A category assigned by a rule is only as good as that rule. When the rule
+    stops claiming a transaction, the category it left behind is stale state,
+    and it would go on feeding a budget that nobody can explain.
+    """
+
+    def test_a_category_is_cleared_when_no_rule_claims_it(self, household, source, food) -> None:
+        txn = make_transaction(household, source, "AIRTEL PAYMENTS")
+        rule = CategoryRule.objects.create(household=household, category=food, pattern="AIRTEL")
+        categorise_transactions(household)
+        txn.refresh_from_db()
+        assert txn.category_id == food.pk
+
+        rule.delete()
+        result = categorise_transactions(household)
+
+        txn.refresh_from_db()
+        assert txn.category_id is None
+        assert result.cleared == 1
+
+    def test_but_a_choice_the_user_made_survives(self, household, source, food) -> None:
+        """Clearing applies to what rules assigned, never to what a person did."""
+        txn = make_transaction(household, source, "SOMETHING ONLY I UNDERSTAND")
+        txn.category = food
+        txn.is_categorised_by_user = True
+        txn.save()
+
+        result = categorise_transactions(household)
+
+        txn.refresh_from_db()
+        assert txn.category_id == food.pk
+        assert result.cleared == 0
