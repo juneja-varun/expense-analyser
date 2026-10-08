@@ -45,14 +45,28 @@ class PasswordRequired(ParseError):
         )
 
 
+def _is_password_error(exc: BaseException) -> bool:
+    """Does this exception mean "wrong or missing password"?
+
+    pdfplumber catches whatever pdfminer raises and re-raises it wrapped in a
+    `PdfminerException`, so `except PDFPasswordIncorrect` never fires on an
+    encrypted file — it is reachable only through the wrapper. Missing that
+    turned "this needs a password" into "this PDF has no text layer", which
+    sent people off to re-download a statement that was fine.
+
+    The original is reachable three ways depending on how it was wrapped, so
+    all three are checked rather than relying on one.
+    """
+    candidates = [exc, exc.__cause__, exc.__context__, *exc.args]
+    return any(isinstance(item, PDFPasswordIncorrect) for item in candidates)
+
+
 def is_encrypted(file: ParsedFile) -> bool:
     try:
         with pdfplumber.open(file.path):
             return False
-    except PDFPasswordIncorrect:
-        return True
-    except Exception:
-        return False
+    except Exception as exc:
+        return _is_password_error(exc)
 
 
 def open_pdf(file: ParsedFile) -> pdfplumber.PDF:
@@ -68,10 +82,10 @@ def open_pdf(file: ParsedFile) -> pdfplumber.PDF:
     for password in passwords:
         try:
             return pdfplumber.open(file.path, password=password)
-        except PDFPasswordIncorrect as exc:
-            last_error = exc
-            continue
         except Exception as exc:
+            if _is_password_error(exc):
+                last_error = exc
+                continue
             raise ParseError(f"Could not read the PDF: {exc}") from exc
 
     raise PasswordRequired() from last_error

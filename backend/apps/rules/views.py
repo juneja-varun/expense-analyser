@@ -10,7 +10,12 @@ from rest_framework.response import Response
 
 from apps.common.views import HouseholdScopedViewSet
 from apps.rules.engine import categorise_transactions, distinctive_fragment
-from apps.rules.models import CategoryRule, extract_vpa, normalise_for_matching
+from apps.rules.models import (
+    CategoryRule,
+    extract_vpa,
+    matchable_text,
+    normalise_for_matching,
+)
 from apps.rules.serializers import CategoryRuleSerializer
 from apps.transactions.models import Transaction
 
@@ -37,7 +42,9 @@ def suggest_rule(description: str) -> tuple[str, str]:
     if fragment:
         return CategoryRule.MatchType.CONTAINS, fragment
 
-    return CategoryRule.MatchType.EXACT, normalise_for_matching(description)
+    # Matched against the same stripped text `matches()` uses, or an EXACT rule
+    # suggested here would never fire.
+    return CategoryRule.MatchType.EXACT, normalise_for_matching(matchable_text(description))
 
 
 class CategoryRuleViewSet(HouseholdScopedViewSet):

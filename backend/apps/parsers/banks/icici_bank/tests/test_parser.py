@@ -130,6 +130,46 @@ class TestWrappedDescriptions:
         assert "BANK/000000000000" not in second.description
         assert second.description.startswith("SECOND MERCHANT")
 
+    def test_a_reference_tail_containing_spaces_still_stays_put(self) -> None:
+        """IMPS references carry the payee name, so they contain spaces.
+
+        Found by importing a real month: the reference below an IMPS transfer
+        was read as the *next* row's merchant, so a ₹169 grocery order arrived
+        described as a ₹30,000 bank transfer — and was categorised from it.
+        """
+        statement = parse(
+            "01-07-2026 B/F 1,000.00\n"
+            "SOMEONE ELSE\n"
+            "02-07-2026 MOBILE BANKING 100.00 900.00\n"
+            "MMT/IMPS/619521828164/SOMEONE ELSE/EXBK0001387\n"
+            "GROCERY SHOP\n"
+            "03-07-2026 200.00 700.00\n"
+        )
+
+        transfer, groceries = statement.transactions
+        assert "MMT/IMPS/619521828164" in transfer.description
+        assert "MMT/IMPS" not in groceries.description
+        assert groceries.description.startswith("GROCERY SHOP")
+
+    def test_but_a_payee_name_is_never_mistaken_for_plumbing(self) -> None:
+        """The guard that makes the case above safe.
+
+        A company name has spaces too. Absorbing one into the row above would
+        leave its own transaction with no description at all — a worse failure
+        than the one being fixed, and a silent one.
+        """
+        statement = parse(
+            "01-07-2026 B/F 1,000.00\n"
+            "FIRST MERCHANT\n"
+            "02-07-2026 100.00 900.00\n"
+            "Euronet Services India Pvt Ltd\n"
+            "03-07-2026 200.00 700.00\n"
+        )
+
+        first, second = statement.transactions
+        assert "Euronet" not in first.description
+        assert second.description.startswith("Euronet Services India Pvt Ltd")
+
 
 class TestHeaderIsNotMistakenForTransactions:
     def test_the_account_summary_is_skipped(self) -> None:

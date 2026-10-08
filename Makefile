@@ -64,9 +64,12 @@ test-backend: ## Run the Python test suite
 
 inspect: ## Diagnose a statement file: make inspect FILE=~/statement.pdf [PASSWORD=x]
 	@test -n "$(FILE)" || { echo "Usage: make inspect FILE=~/statement.pdf [PASSWORD=xxxx]"; exit 1; }
-	@# abspath: the recipe cds into backend/, so a path relative to the repo
-	@# root would otherwise resolve against the wrong directory.
-	$(BACKEND) python manage.py inspect_statement "$(abspath $(FILE))" \
+	@# Resolved here, not in the recipe: the recipe cds into backend/, so a
+	@# relative path would resolve against the wrong directory. Python rather
+	@# than $(abspath ...) because make does not expand a leading ~, and the
+	@# help text above tells people to type one.
+	$(BACKEND) python manage.py inspect_statement \
+		"$$(python3 -c 'import os,sys; print(os.path.abspath(os.path.expanduser(sys.argv[1])))' "$(FILE)")" \
 		$(if $(PASSWORD),--password "$(PASSWORD)",)
 
 migrations-check: ## Fail if a model change has no migration

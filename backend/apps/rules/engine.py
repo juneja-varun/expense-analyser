@@ -37,6 +37,8 @@ class CategorisationResult:
     categorised: int
     unmatched: int
     skipped_user_categorised: int
+    cleared: int = 0
+    """Rule-assigned categories removed because no rule claims them any more."""
 
     @property
     def total(self) -> int:
@@ -96,6 +98,7 @@ def categorise_transactions(
     categorised = 0
     unmatched = 0
     skipped = 0
+    cleared = 0
     to_update: list[Transaction] = []
     match_counts: dict[int, int] = {}
 
@@ -107,6 +110,16 @@ def categorise_transactions(
         rule = categorise(txn.description, rules) if rules else None
         if rule is None:
             unmatched += 1
+            # A category that came from a rule is only ever as good as that
+            # rule. When the rule is deleted, corrected, or — as happened here
+            # — fixed to stop matching something it never should have, the
+            # category it assigned has to go with it. Leaving it means fixing a
+            # bad rule silently changes nothing, and the wrong number stays in
+            # the budget forever.
+            if txn.category_id is not None:
+                txn.category_id = None
+                to_update.append(txn)
+                cleared += 1
             continue
 
         if txn.category_id != rule.category_id:
@@ -127,6 +140,7 @@ def categorise_transactions(
         categorised=categorised,
         unmatched=unmatched,
         skipped_user_categorised=skipped,
+        cleared=cleared,
     )
 
 

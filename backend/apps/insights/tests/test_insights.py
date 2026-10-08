@@ -12,6 +12,7 @@ from apps.categories.models import Category
 from apps.insights.services import monthly_totals, spend_by_category
 from apps.sources.models import Source
 from apps.transactions.models import Transaction
+from apps.transactions.services import month_spend_by_category
 
 pytestmark = pytest.mark.django_db
 
@@ -224,3 +225,42 @@ class TestChartAndBudgetAgree:
         )
 
         assert budget_row.spent == chart_row.amount == D("2300.00")
+
+
+class TestUncategorisedIsNotNetted:
+    """Uncategorised is a pile, not a category.
+
+    Found by importing a real month: an uncategorised salary credit cancelled
+    almost every uncategorised debit, so the bucket netted to zero and dropped
+    out of the chart. "Where it went" then showed ₹19k of a ₹1.5L month and
+    gave no hint that anything was missing.
+    """
+
+    def test_an_uncategorised_credit_does_not_cancel_uncategorised_spend(
+        self, household, source
+    ) -> None:
+        txn(household, source, "-30000.00")
+        txn(household, source, "125000.00")
+
+        spend = month_spend_by_category(household, APRIL, include_uncategorised=True)
+
+        assert spend[None] == Decimal("30000.00")
+
+    def test_a_refund_still_nets_off_within_a_real_category(self, household, source) -> None:
+        """The netting rule is right where it applies — one merchant, one category."""
+        food = category(household, "Eating Out")
+        txn(household, source, "-450.00", food)
+        txn(household, source, "150.00", food)
+
+        spend = month_spend_by_category(household, APRIL)
+
+        assert spend[food.pk] == Decimal("300.00")
+
+    def test_the_chart_total_matches_what_was_spent(self, household, source) -> None:
+        txn(household, source, "-450.00", category(household, "Eating Out"))
+        txn(household, source, "-30000.00")
+        txn(household, source, "125000.00")
+
+        rows = spend_by_category(household, APRIL)
+
+        assert sum(row.amount for row in rows) == Decimal("30450.00")
